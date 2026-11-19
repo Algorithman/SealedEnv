@@ -48,6 +48,21 @@ internal static class GeneratorRunner
         return (runResult.Diagnostics, generated?.ToString());
     }
 
+    /// <summary>Multi-carrier variant: every generated tree, in hint-name order.</summary>
+    public static (ImmutableArray<Diagnostic> Diagnostics, ImmutableArray<string> GeneratedSources) RunAll(string source)
+    {
+        var compilation = CreateCompilation(new[] { CSharpSyntaxTree.ParseText(source), });
+
+        var runResult = CSharpGeneratorDriver
+            .Create(new SealedEnvGenerator())
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        return (
+            runResult.Diagnostics,
+            runResult.GeneratedTrees.Select(static tree => tree.ToString()).ToImmutableArray());
+    }
+
     /// <summary>
     ///     Runs the generator twice on the SAME driver, with the carrier's syntax tree
     ///     shared between compilations and only the unrelated file edited between runs —

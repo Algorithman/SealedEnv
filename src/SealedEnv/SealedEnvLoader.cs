@@ -54,7 +54,24 @@ public static class SealedEnvLoader
     {
         ArgumentNullException.ThrowIfNull(provider);
 
-        var raw = provider.Get(key);
+        string? raw;
+        try
+        {
+            raw = provider.Get(key);
+        }
+        catch (Exception exception)
+        {
+            // A hostile provider must not break the TryLoad-never-throws contract:
+            // the failure is recorded as an ordinary Invalid error and the load
+            // keeps collecting the remaining members.
+            Record(
+                ref errors,
+                key,
+                EnvErrorCode.Invalid,
+                typeName,
+                $"Environment provider {provider.GetType().FullName} threw for '{key}': {exception.Message}");
+            return null;
+        }
 
         if (raw is { Length: > 0, })
         {

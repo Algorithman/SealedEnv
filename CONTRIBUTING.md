@@ -127,6 +127,7 @@ cached.
 | SVE0006 | `Parser` lacks `public static T Parse(string)` | yes |
 | SVE0007 | Primary-constructor parameter without `[EnvKey]` | yes |
 | SVE0008 | Carrier already declares `Load`/`TryLoad`/`SealedEnvBind` | yes |
+| SVE0009 | `[SealedEnv]` prefix is whitespace only | yes |
 | SVE0100 | Nested / generic / ref-struct carrier — not supported yet | yes (warning) |
 
 ## Releasing

@@ -43,6 +43,27 @@ internal sealed partial record DefaultsConfig(
 [SealedEnv(Prefix = "S_")]
 internal readonly partial record struct Settings([EnvKey(Default = "10")] int Retries);
 
+/// <summary>
+///     Adversarial: C# keyword parameter names (@-escaped), a non-ASCII parameter
+///     name (derived key GRÖßE — char-wise uppercasing leaves ß unchanged), and
+///     explicit keys that are hostile as C# string literals — quotes, backslashes,
+///     newlines. Pins that the emitter escapes them (SymbolDisplay.FormatLiteral)
+///     and that lookups still match exactly.
+/// </summary>
+[SealedEnv(Prefix = "HATE_")]
+internal sealed partial record HostileKeysConfig(
+    [EnvKey("MY\"QUOTED\"KEY")] string @class,
+    [EnvKey("BACK\\SLASH\\KEY")] string @event,
+    [EnvKey("NEW\nLINE\\KEY")] string @namespace,
+    [EnvKey] string Größe);
+
+/// <summary>Adversarial: a plain (non-record) struct carrier with a primary constructor.</summary>
+[SealedEnv(Prefix = "S_")]
+internal partial struct PlainStructSettings([EnvKey(Default = "debug")] string Mode)
+{
+    public string Mode { get; } = Mode;
+}
+
 // Plain primary-constructor class: the class body must capture the parameter into a
 // property itself — records do this implicitly, classes do not.
 [SealedEnv(Prefix = "S_")]

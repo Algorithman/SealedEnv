@@ -10,4 +10,5 @@ SVE0005 | SealedEnv | Error | Carrier type is not sealed
 SVE0006 | SealedEnv | Error | Parser type lacks a usable Parse method
 SVE0007 | SealedEnv | Error | Primary constructor parameter lacks [EnvKey]
 SVE0008 | SealedEnv | Error | Member name conflicts with a generated member
+SVE0009 | SealedEnv | Error | [SealedEnv] prefix is whitespace only
 SVE0100 | SealedEnv | Warning | Carrier shape not yet supported

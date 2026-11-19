@@ -101,7 +101,7 @@ default; `string?` members never raise `Empty`. `EmptyAsUnset` defaults to
 | `bool` | `1` / `0` / `true` / `false` / `on` / `off`, case-insensitive |
 | `string`, `string?` | as-is |
 | `TimeSpan` | BCL semantics, invariant culture (bare `"30"` = 30 days) |
-| `Uri` | absolute URIs only |
+| `Uri` | absolute URIs only — platform-invariant: an explicit scheme is required (`/path` is rejected even on Unix, where the BCL would map it to `file:///path`) |
 | `Guid` | `Guid.Parse` semantics |
 | enums | `Enum.Parse` semantics, case-insensitive; numeric and flag lists accepted |
 | `IParsable<T>` | `T.Parse(value, null)` called directly — zero boxing, AOT-safe |
@@ -122,6 +122,7 @@ Unsupported parameter types fail compilation with `SVE0002` — never silently.
 | `SVE0006` | `Parser` lacks `public static T Parse(string)` |
 | `SVE0007` | Primary-constructor parameter without `[EnvKey]` |
 | `SVE0008` | Carrier already declares `Load`/`TryLoad`/`SealedEnvBind` |
+| `SVE0009` | `[SealedEnv]` prefix is whitespace only |
 | `SVE0100` | Nested / generic / ref-struct carrier (not supported yet, warning) |
 
 Blocking diagnostics suppress generation; `SVE0003` still generates

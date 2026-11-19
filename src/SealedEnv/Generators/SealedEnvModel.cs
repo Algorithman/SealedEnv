@@ -162,6 +162,19 @@ internal static class SealedEnvModel
         var effectivePrefix = prefix is { Length: > 0, } nonEmptyPrefix ? nonEmptyPrefix : string.Empty;
         var attributeLocation = AttributeLocation(attributeData);
 
+        // SVE0009: a whitespace-only prefix silently produces keys no environment can
+        // match (" " yields " PORT"). Empty string stays legal — it is the documented
+        // way to read global keys. (The Length guard matters: "".All(...) is
+        // vacuously true and would block the legal empty prefix.)
+        if (prefix is { Length: > 0, } && prefix.All(char.IsWhiteSpace))
+        {
+            diagnostics.Add(new DiagnosticInfo(
+                "SVE0009",
+                [prefix, typeSymbol.Name,],
+                attributeLocation));
+            return NotGeneratable(typeSymbol, emptyAsUnset, diagnostics, attributeLocation);
+        }
+
         // SVE0005: reference-type carriers must be sealed (plan §1); record structs
         // are implicitly sealed and pass here.
         if (!typeSymbol.IsValueType && !typeSymbol.IsSealed)

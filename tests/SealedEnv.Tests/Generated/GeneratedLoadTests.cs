@@ -218,4 +218,39 @@ public class GeneratedLoadTests
         Assert.Equal("Host=localhost", local.DbConnection);
         Assert.Equal(8080, production.Port); // defaults apply identically in both loads
     }
+
+    [Fact]
+    public void Hostile_keys_and_keyword_parameters_load_exactly()
+    {
+        // The explicit keys are hostile as C# string literals (quotes, backslashes,
+        // newlines); the parameters are @-escaped keywords and non-ASCII. If the
+        // emitter's literal escaping or the derivation regresses, this stops
+        // compiling or the lookups miss.
+        var config = HostileKeysConfig.Load(new DictionaryEnvProvider(new Dictionary<string, string?>
+        {
+            ["HATE_MY\"QUOTED\"KEY"] = "cls",
+            ["HATE_BACK\\SLASH\\KEY"] = "evt",
+            ["HATE_NEW\nLINE\\KEY"] = "ns",
+            // Derivation uppercases char-wise: ß has no single-character uppercase
+            // mapping, so Größe derives GRÖßE (full case folding would give GRÖSSE).
+            ["HATE_GRÖßE"] = "42",
+        }));
+
+        Assert.Equal("cls", config.@class);
+        Assert.Equal("evt", config.@event);
+        Assert.Equal("ns", config.@namespace);
+        Assert.Equal("42", config.Größe);
+    }
+
+    [Fact]
+    public void Plain_struct_carriers_load_with_value_semantics()
+    {
+        var settings = PlainStructSettings.Load(new DictionaryEnvProvider(
+            new Dictionary<string, string?> { ["S_MODE"] = "release", }));
+
+        Assert.Equal("release", settings.Mode);
+
+        var fallback = PlainStructSettings.Load(new DictionaryEnvProvider(new Dictionary<string, string?>()));
+        Assert.Equal("debug", fallback.Mode);
+    }
 }

@@ -34,6 +34,7 @@ public class KeyDerivationTests
     [InlineData("port", "PORT")] // lowercase input is uppercased
     [InlineData("myKey", "MYKEY")] // no acronym boundary → verbatim uppercase
     [InlineData("Db2Host", "DB2HOST")] // digits do not create boundaries
+    [InlineData("Größe", "GRÖßE")] // char-wise uppercasing: ß has no single-char uppercase (no full case folding)
     public void Derives_keys_per_the_pinned_rule(string parameterName, string expected)
     {
         Assert.Equal(expected, EnvKeyDerivation.Derive(parameterName));
