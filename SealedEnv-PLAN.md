@@ -225,11 +225,12 @@ Runtime lib: `net10.0` (fall back to `net8.0` if your SDK is older); C# 13+ for 
 **Exit criteria:** AOT publish green in CI; README shows the in-memory test example. ✅ (CI job added; win-x64 verified locally end-to-end)
 
 ### Phase 6 — Benchmarks & docs (1 evening)
-- [ ] BenchmarkDotNet, four scenarios on a 6-field record: raw `Environment.GetEnvironmentVariable` + manual parse (floor), SealedEnv `Load()`, `Microsoft.Extensions.Configuration` binder (reflection path), `DotNetEnv`
-- [ ] README: quickstart first screen, semantics matrix table, diagnostics table, benchmark table, AOT badge, "why not Configuration binder" comparison
-- [ ] `CLAUDE.md`-style `CONTRIBUTING.md` for your future self: pipeline diagram of the generator stages
+- [x] BenchmarkDotNet, four scenarios on a 6-field record: raw `Environment.GetEnvironmentVariable` + manual parse (floor), SealedEnv `Load()`, `Microsoft.Extensions.Configuration` binder (reflection path), `DotNetEnv` — all scenarios read the same six `BENCH_*` vars set by a shared `[GlobalSetup]` inside BDN's isolated process (dev machine env untouched). Decisions pinned by measurement: the floor's host parsing is a hand-rolled loop, not LINQ (a LINQ floor allocates more than generated `Load()` and would fake the ratio); DotNetEnv 3.2.0 ships only GetString/GetBool/GetInt/GetDouble, so its TimeSpan/array parsing is hand-written as its users must; the reflection binder binds `string[]` ONLY from indexed children (`BENCH_HOSTS__0..2`, found empirically — a comma string binds an *empty* array), which is itself a documented semantic difference. Numbers (win-x64, .NET 10.0.15): floor 264.7 ns / 896 B; SealedEnv 302.3 ns / 784 B (**1.14×, less allocation than the floor**); DotNetEnv 247.6 ns / 608 B (leaner per-key env lookup than the BCL API, whose Windows path grows a buffer per call); binder 10.88 µs / 36.35 KB (~41× both)
+- [x] `--verify` self-check in the benchmarks project: runs all four scenarios once against the same env and asserts identical binding, exit code gates it — wired into CI as a cheap drift guard (a real BenchmarkDotNet run stays local); BDN requires benchmark classes unsealed (it subclasses them)
+- [x] README: quickstart first screen, semantics matrix table, diagnostics table, benchmark table, AOT badge (CI badge + NativeAOT shield), "why not Configuration binder" comparison (AOT, failure semantics, stateable matrix, indexed-children arrays, 41× cost)
+- [x] `CLAUDE.md`-style `CONTRIBUTING.md` for your future self: pipeline diagram of the generator stages (ForAttributeWithMetadataName → SealedEnvModel.Transform → value-model EnvTargetModel → RegisterSourceOutput → SealedEnvEmitter; stray-[EnvKey] CreateSyntaxProvider pass in parallel), design invariants, diagnostics reference, SDK/toolchain notes
 
-**Exit criteria:** numbers you can tweet; README sells the library without reading source.
+**Exit criteria:** numbers you can tweet; README sells the library without reading source. ✅
 
 ### Phase 7 — Release v0.1.0-alpha (1 evening)
 - [ ] Pack: deterministic build, SourceLink, `.snupkg` symbols, NuGet metadata (README rendered, tags: `environment-variables config source-generator aot nativeaot settings`)

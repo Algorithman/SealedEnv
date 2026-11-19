@@ -32,6 +32,10 @@ jobs:
         run: dotnet build
       - name: Test
         run: dotnet test --no-build
+      - name: Cross-check benchmark scenarios
+        # Phase 6 (SealedEnv-PLAN.md §3): all four benchmark approaches must bind
+        # identical values — cheap self-check, unlike a real BenchmarkDotNet run.
+        run: dotnet run --project benchmarks/SealedEnv.Benchmarks --no-build -- --verify
 
   aot-publish:
     # Phase 5 gate (SealedEnv-PLAN.md §3): the sample must NativeAOT-publish AND run.
