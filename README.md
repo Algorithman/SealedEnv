@@ -20,10 +20,10 @@ listing every bad variable at once, and a testable provider seam.
 
 > 🚧 Work in progress — the build plan lives in [SealedEnv-PLAN.md](SealedEnv-PLAN.md).
 > Current status: **Phase 7 (release)** — packaging, CHANGELOG and the tag-driven
-> release job are wired (`git tag vX.Y.Z` → pack → NuGet push → GitHub release;
-> needs the `NUGET_API_KEY` secret). The packed nupkg is verified end-to-end:
-> installed into a scratch console app via `dotnet add package`, generates and
-> runs correctly. Changes since the last tag: see the
+> release job are wired (`git tag vX.Y.Z` → pack → NuGet push via trusted
+> publishing → GitHub release; no stored secrets). The packed nupkg is verified
+> end-to-end: installed into a scratch console app via `dotnet add package`,
+> generates and runs correctly. Changes since the last tag: see the
 > [CHANGELOG](CHANGELOG.md).
 
 ## Quickstart
@@ -264,7 +264,8 @@ dotnet run -c Release --project benchmarks/SealedEnv.Benchmarks -- --filter "*"
 
 # Release: bump VersionPrefix in Directory.Build.props, move the
 # AnalyzerReleases.Unshipped.md table into Shipped, then tag — CI packs,
-# pushes to NuGet (NUGET_API_KEY secret) and creates the GitHub release.
+# pushes to NuGet via trusted publishing (OIDC, no stored secrets) and
+# creates the GitHub release.
 grep VersionPrefix Directory.Build.props
 git tag vX.Y.Z && git push origin vX.Y.Z
 ```

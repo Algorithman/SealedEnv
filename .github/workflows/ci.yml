@@ -77,10 +77,15 @@ jobs:
 
   release:
     # Phase 7 (SealedEnv-PLAN.md §3): tag vX.Y.Z -> pack -> NuGet push -> GitHub release.
+    # Publishing uses NuGet trusted publishing (OIDC): no stored API key. This
+    # requires a trusted publisher registered on nuget.org FIRST (account -> API
+    # Keys -> Trusted Publishing: owner, repo Algorithman/SealedEnv, workflow
+    # ci.yml, package ID glob SealedEnv*) or the login step fails.
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: write   # gh release create
+      id-token: write   # OIDC token for NuGet trusted publishing
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -97,11 +102,19 @@ jobs:
         # ContinuousIntegrationBuild normalizes paths so SourceLink URLs and the
         # embedded sources are reproducible on any machine.
         run: dotnet pack src/SealedEnv -c Release -p:ContinuousIntegrationBuild=true -o artifacts
+      - name: NuGet login (trusted publishing)
+        # Exchanges this job's OIDC token for a ~1-hour push token against the
+        # trust registered on nuget.org — no long-lived secret involved.
+        uses: NuGet/login@v1
+        id: login
+        with:
+          user-or-organization: Algorithman
       - name: Push to NuGet
-        env:
-          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
-        if: env.NUGET_API_KEY != ''
-        run: dotnet nuget push "artifacts/*.nupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
+        run: >
+          dotnet nuget push "artifacts/*.nupkg"
+          --api-key "${{ steps.login.outputs.nuget-api-token }}"
+          --source https://api.nuget.org/v3/index.json
+          --skip-duplicate
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}

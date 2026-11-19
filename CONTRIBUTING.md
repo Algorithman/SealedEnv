@@ -142,9 +142,13 @@ cached.
 3. Update CHANGELOG.md.
 4. `git tag vX.Y.Z && git push origin vX.Y.Z` — the tag must match
    `VersionPrefix` exactly (the CI `release` job hard-fails otherwise). CI
-   packs with `ContinuousIntegrationBuild`, pushes to nuget.org
-   (`NUGET_API_KEY` secret) and creates the GitHub release with the nupkg +
-   snupkg attached.
+   packs with `ContinuousIntegrationBuild`, pushes to nuget.org via **trusted
+   publishing** (NuGet/login action exchanging the job's OIDC token for a
+   ~1-hour push token — no stored API key) and creates the GitHub release with
+   the nupkg + snupkg attached. One-time prerequisite: register the trusted
+   publisher on nuget.org (account → API Keys → Trusted Publishing: owner,
+   repo `Algorithman/SealedEnv`, workflow `ci.yml`, package ID glob
+   `SealedEnv*`) — the login step fails until it exists.
 
 Packaging decisions to remember: SourceLink comes from the SDK's built-in git
 integration (the `Microsoft.SourceLink.GitHub` 8.0.0 package conflicts with
