@@ -6,23 +6,23 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="coverlet.collector" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
-    <PackageReference Include="Verify.Xunit" />
-    <PackageReference Include="xunit" />
-    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="coverlet.collector"/>
+    <PackageReference Include="Microsoft.NET.Test.Sdk"/>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp"/>
+    <PackageReference Include="Verify.Xunit"/>
+    <PackageReference Include="xunit"/>
+    <PackageReference Include="xunit.runner.visualstudio"/>
   </ItemGroup>
 
   <!-- Normal (non-analyzer) reference: these tests drive the generator in-memory
        via CSharpGeneratorDriver for snapshot/diagnostic testing. -->
   <ItemGroup>
-    <ProjectReference Include="..\..\src\SealedEnv\Generators\SealedEnvGenerator.csproj" />
-    <ProjectReference Include="..\..\src\SealedEnv\SealedEnv.csproj" />
+    <ProjectReference Include="..\..\src\SealedEnv\Generators\SealedEnvGenerator.csproj"/>
+    <ProjectReference Include="..\..\src\SealedEnv\SealedEnv.csproj"/>
   </ItemGroup>
 
   <ItemGroup>
-    <Using Include="Xunit" />
+    <Using Include="Xunit"/>
   </ItemGroup>
 
 </Project>

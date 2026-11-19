@@ -1,9 +1,20 @@
+// ---------------------------------------------------------------------------------------
+// Solution: SealedEnv
+// Project: SealedEnv.Tests
+// Filename: TimeSpanUriGuidLoaderTests.cs
+// 
+// Last modified: 2026-11-19 14:25
+// Created:       2026-11-19 11:11
+// 
+// Copyright: 2026 Algorithman
+// ---------------------------------------------------------------------------------------
+
 namespace SealedEnv.Tests.Loader;
 
 /// <summary>
-/// Type integrity for TimeSpan, Uri and Guid: canonical forms round-trip, malformed
-/// values become structured <see cref="EnvErrorCode.Invalid"/> errors, and Uri
-/// deliberately accepts only absolute URIs.
+///     Type integrity for TimeSpan, Uri and Guid: canonical forms round-trip, malformed
+///     values become structured <see cref="EnvErrorCode.Invalid" /> errors, and Uri
+///     deliberately accepts only absolute URIs.
 /// </summary>
 public class TimeSpanUriGuidLoaderTests
 {
@@ -60,7 +71,7 @@ public class TimeSpanUriGuidLoaderTests
     {
         var env = TestEnv.Empty();
 
-        Assert.Equal(TimeSpan.FromSeconds(30), env.TimeSpan("MYAPP_TIMEOUT", @default: "00:00:30"));
+        Assert.Equal(TimeSpan.FromSeconds(30), env.TimeSpan("MYAPP_TIMEOUT", "00:00:30"));
         Assert.Empty(env.Errors);
     }
 
@@ -69,7 +80,7 @@ public class TimeSpanUriGuidLoaderTests
     {
         var env = TestEnv.Empty();
 
-        env.TimeSpan("MYAPP_TIMEOUT", @default: "30s");
+        env.TimeSpan("MYAPP_TIMEOUT", "30s");
         Assert.Equal(EnvErrorCode.Invalid, env.SingleError.Code);
     }
 

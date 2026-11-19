@@ -1,14 +1,24 @@
-using System.Threading;
+// ---------------------------------------------------------------------------------------
+// Solution: SealedEnv
+// Project: SealedEnvGenerator
+// Filename: StrayEnvKeyDetection.cs
+// 
+// Last modified: 2026-11-19 14:25
+// Created:       2026-11-19 12:11
+// 
+// Copyright: 2026 Algorithman
+// ---------------------------------------------------------------------------------------
+
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace SealedEnv.Generators;
 
 /// <summary>
-/// SVE0001: flags <c>[EnvKey]</c> on parameters outside primary constructors
-/// (methods, regular constructors, lambdas, delegates, local functions), where it
-/// silently does nothing. Non-parameter locations don't reach this pass — the C#
-/// compiler itself rejects them via <c>AttributeTargets.Parameter</c> (CS0592).
+///     SVE0001: flags <c>[EnvKey]</c> on parameters outside primary constructors
+///     (methods, regular constructors, lambdas, delegates, local functions), where it
+///     silently does nothing. Non-parameter locations don't reach this pass — the C#
+///     compiler itself rejects them via <c>AttributeTargets.Parameter</c> (CS0592).
 /// </summary>
 internal static class StrayEnvKeyDetection
 {
@@ -35,10 +45,10 @@ internal static class StrayEnvKeyDetection
     }
 
     /// <summary>
-    /// The <c>[SealedEnv]</c> carrier pass never sees these nodes (primary-constructor
-    /// parameters are excluded here), so the two pipelines cannot double-report.
-    /// Resolution goes through the parameter symbol's attribute data — attribute
-    /// names bind specially and are invisible to GetSymbolInfo.
+    ///     The <c>[SealedEnv]</c> carrier pass never sees these nodes (primary-constructor
+    ///     parameters are excluded here), so the two pipelines cannot double-report.
+    ///     Resolution goes through the parameter symbol's attribute data — attribute
+    ///     names bind specially and are invisible to GetSymbolInfo.
     /// </summary>
     public static DiagnosticInfo? Transform(GeneratorSyntaxContext context, CancellationToken cancellationToken)
     {
@@ -56,24 +66,30 @@ internal static class StrayEnvKeyDetection
             return null; // a user attribute that merely shares the name
         }
 
-        if (parameter.Parent is ParameterListSyntax { Parent: TypeDeclarationSyntax })
+        if (parameter.Parent is ParameterListSyntax { Parent: TypeDeclarationSyntax, })
         {
             return null; // legitimate primary-constructor parameter
         }
 
         return new DiagnosticInfo(
             "SVE0001",
-            [parameter.Identifier.ValueText],
+            [parameter.Identifier.ValueText,],
             SealedEnvModel.AttributeLocation(envKeyAttribute));
     }
 
-    private static bool HasEnvKeyishName(NameSyntax name) => name switch
+    private static bool HasEnvKeyishName(NameSyntax name)
     {
-        IdentifierNameSyntax identifier => IsEnvKeyIdentifier(identifier.Identifier.ValueText),
-        QualifiedNameSyntax qualified => IsEnvKeyIdentifier(qualified.Right.Identifier.ValueText),
-        AliasQualifiedNameSyntax alias => IsEnvKeyIdentifier(alias.Name.Identifier.ValueText),
-        _ => false,
-    };
+        return name switch
+        {
+            IdentifierNameSyntax identifier => IsEnvKeyIdentifier(identifier.Identifier.ValueText),
+            QualifiedNameSyntax qualified => IsEnvKeyIdentifier(qualified.Right.Identifier.ValueText),
+            AliasQualifiedNameSyntax alias => IsEnvKeyIdentifier(alias.Name.Identifier.ValueText),
+            _ => false,
+        };
+    }
 
-    private static bool IsEnvKeyIdentifier(string text) => text is "EnvKey" or "EnvKeyAttribute";
+    private static bool IsEnvKeyIdentifier(string text)
+    {
+        return text is "EnvKey" or "EnvKeyAttribute";
+    }
 }

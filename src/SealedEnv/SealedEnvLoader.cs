@@ -1,3 +1,14 @@
+// ---------------------------------------------------------------------------------------
+// Solution: SealedEnv
+// Project: SealedEnv
+// Filename: SealedEnvLoader.cs
+// 
+// Last modified: 2026-11-19 14:25
+// Created:       2026-11-19 12:11
+// 
+// Copyright: 2026 Algorithman
+// ---------------------------------------------------------------------------------------
+
 using System.ComponentModel;
 using System.Globalization;
 using System.Text;
@@ -5,29 +16,29 @@ using System.Text;
 namespace SealedEnv;
 
 /// <summary>
-/// Parsing/validation pipeline called by generated <c>Load()</c>/<c>TryLoad()</c> members.
-/// The generator emits thin calls into these helpers so generated code stays short and
-/// all parsing logic is versioned with the runtime package.
+///     Parsing/validation pipeline called by generated <c>Load()</c>/<c>TryLoad()</c> members.
+///     The generator emits thin calls into these helpers so generated code stays short and
+///     all parsing logic is versioned with the runtime package.
 /// </summary>
 /// <remarks>
-/// Public despite being generator plumbing: generated code is compiled into the
-/// <em>consumer's</em> assembly and therefore cannot see internals of this one
-/// (the plan's "internal helpers" idea is unworkable across assemblies).
-/// Hidden from editors; call the generated members instead of these helpers.
-/// Every helper is culture-invariant and never throws for bad values — it records
-/// an <see cref="EnvError"/> into <paramref name="errors"/> and returns
-/// <c>default</c>; the generated member discards the value and throws
-/// <see cref="SealedEnvException"/> when any error was recorded.
+///     Public despite being generator plumbing: generated code is compiled into the
+///     <em>consumer's</em> assembly and therefore cannot see internals of this one
+///     (the plan's "internal helpers" idea is unworkable across assemblies).
+///     Hidden from editors; call the generated members instead of these helpers.
+///     Every helper is culture-invariant and never throws for bad values — it records
+///     an <see cref="EnvError" /> into <paramref name="errors" /> and returns
+///     <c>default</c>; the generated member discards the value and throws
+///     <see cref="SealedEnvException" /> when any error was recorded.
 /// </remarks>
 [EditorBrowsable(EditorBrowsableState.Never)]
 public static class SealedEnvLoader
 {
     /// <summary>
-    /// Shared lookup/default/empty handling for every typed helper.
-    /// Returns the raw value to parse (env value, attribute default, or an allowed
-    /// empty string), or <see langword="null"/> when the binding resolves to "no
-    /// value" — either unset-and-acceptable or failed (an error is recorded in that
-    /// case; helpers return <c>default</c> for both).
+    ///     Shared lookup/default/empty handling for every typed helper.
+    ///     Returns the raw value to parse (env value, attribute default, or an allowed
+    ///     empty string), or <see langword="null" /> when the binding resolves to "no
+    ///     value" — either unset-and-acceptable or failed (an error is recorded in that
+    ///     case; helpers return <c>default</c> for both).
     /// </summary>
     private static string? Resolve(
         IEnvProvider provider,
@@ -45,7 +56,7 @@ public static class SealedEnvLoader
 
         var raw = provider.Get(key);
 
-        if (raw is { Length: > 0 })
+        if (raw is { Length: > 0, })
         {
             return raw;
         }
@@ -133,7 +144,7 @@ public static class SealedEnvLoader
         string? @default, bool required, bool allowEmpty, bool emptyAsUnset,
         ref List<EnvError> errors)
     {
-        var raw = Resolve(provider, key, displayName, "int", @default, required, allowEmpty, emptyAsUnset, unsetYieldsNull: false, ref errors);
+        var raw = Resolve(provider, key, displayName, "int", @default, required, allowEmpty, emptyAsUnset, false, ref errors);
         if (raw is null)
         {
             return default;
@@ -153,7 +164,7 @@ public static class SealedEnvLoader
         string? @default, bool required, bool allowEmpty, bool emptyAsUnset,
         ref List<EnvError> errors)
     {
-        var raw = Resolve(provider, key, displayName, "long", @default, required, allowEmpty, emptyAsUnset, unsetYieldsNull: false, ref errors);
+        var raw = Resolve(provider, key, displayName, "long", @default, required, allowEmpty, emptyAsUnset, false, ref errors);
         if (raw is null)
         {
             return default;
@@ -173,7 +184,7 @@ public static class SealedEnvLoader
         string? @default, bool required, bool allowEmpty, bool emptyAsUnset,
         ref List<EnvError> errors)
     {
-        var raw = Resolve(provider, key, displayName, "double", @default, required, allowEmpty, emptyAsUnset, unsetYieldsNull: false, ref errors);
+        var raw = Resolve(provider, key, displayName, "double", @default, required, allowEmpty, emptyAsUnset, false, ref errors);
         if (raw is null)
         {
             return default;
@@ -198,7 +209,7 @@ public static class SealedEnvLoader
         string? @default, bool required, bool allowEmpty, bool emptyAsUnset,
         ref List<EnvError> errors)
     {
-        var raw = Resolve(provider, key, displayName, "bool", @default, required, allowEmpty, emptyAsUnset, unsetYieldsNull: false, ref errors);
+        var raw = Resolve(provider, key, displayName, "bool", @default, required, allowEmpty, emptyAsUnset, false, ref errors);
         if (raw is null)
         {
             return default;
@@ -228,21 +239,21 @@ public static class SealedEnvLoader
         string? @default, bool required, bool allowEmpty, bool emptyAsUnset,
         ref List<EnvError> errors)
     {
-        var raw = Resolve(provider, key, displayName, "string", @default, required, allowEmpty, emptyAsUnset, unsetYieldsNull: false, ref errors);
+        var raw = Resolve(provider, key, displayName, "string", @default, required, allowEmpty, emptyAsUnset, false, ref errors);
         return raw ?? string.Empty; // null only when faulted; the error gates usage
     }
 
     /// <summary>
-    /// Nullable string: unset resolves to <see langword="null"/> (unless required);
-    /// an explicit empty string is a real value unless <c>EmptyAsUnset</c> maps it
-    /// to unset. Never reports an Empty error.
+    ///     Nullable string: unset resolves to <see langword="null" /> (unless required);
+    ///     an explicit empty string is a real value unless <c>EmptyAsUnset</c> maps it
+    ///     to unset. Never reports an Empty error.
     /// </summary>
     public static string? NullableString(
         IEnvProvider provider, string key, string displayName,
         string? @default, bool required, bool allowEmpty, bool emptyAsUnset,
         ref List<EnvError> errors)
     {
-        return Resolve(provider, key, displayName, "string", @default, required, allowEmpty, emptyAsUnset, unsetYieldsNull: true, ref errors);
+        return Resolve(provider, key, displayName, "string", @default, required, allowEmpty, emptyAsUnset, true, ref errors);
     }
 
     // other BCL types
@@ -252,13 +263,13 @@ public static class SealedEnvLoader
         string? @default, bool required, bool allowEmpty, bool emptyAsUnset,
         ref List<EnvError> errors)
     {
-        var raw = Resolve(provider, key, displayName, "TimeSpan", @default, required, allowEmpty, emptyAsUnset, unsetYieldsNull: false, ref errors);
+        var raw = Resolve(provider, key, displayName, "TimeSpan", @default, required, allowEmpty, emptyAsUnset, false, ref errors);
         if (raw is null)
         {
             return default;
         }
 
-        if (global::System.TimeSpan.TryParse(raw, CultureInfo.InvariantCulture, out var value))
+        if (System.TimeSpan.TryParse(raw, CultureInfo.InvariantCulture, out var value))
         {
             return value;
         }
@@ -272,13 +283,13 @@ public static class SealedEnvLoader
         string? @default, bool required, bool allowEmpty, bool emptyAsUnset,
         ref List<EnvError> errors)
     {
-        var raw = Resolve(provider, key, displayName, "Uri", @default, required, allowEmpty, emptyAsUnset, unsetYieldsNull: false, ref errors);
+        var raw = Resolve(provider, key, displayName, "Uri", @default, required, allowEmpty, emptyAsUnset, false, ref errors);
         if (raw is null)
         {
             return null;
         }
 
-        if (global::System.Uri.TryCreate(raw, UriKind.Absolute, out var value))
+        if (System.Uri.TryCreate(raw, UriKind.Absolute, out var value))
         {
             return value;
         }
@@ -292,14 +303,14 @@ public static class SealedEnvLoader
         string? @default, bool required, bool allowEmpty, bool emptyAsUnset,
         ref List<EnvError> errors)
     {
-        var raw = Resolve(provider, key, displayName, "Guid", @default, required, allowEmpty, emptyAsUnset, unsetYieldsNull: false, ref errors);
+        var raw = Resolve(provider, key, displayName, "Guid", @default, required, allowEmpty, emptyAsUnset, false, ref errors);
         if (raw is null)
         {
             return default;
         }
 
         // Guid parsing is format-based (RFC 4122), not culture-dependent.
-        if (global::System.Guid.TryParse(raw, out var value))
+        if (System.Guid.TryParse(raw, out var value))
         {
             return value;
         }
@@ -317,26 +328,26 @@ public static class SealedEnvLoader
         where T : struct, Enum
     {
         var typeName = typeof(T).Name;
-        var raw = Resolve(provider, key, displayName, typeName, @default, required, allowEmpty, emptyAsUnset, unsetYieldsNull: false, ref errors);
+        var raw = Resolve(provider, key, displayName, typeName, @default, required, allowEmpty, emptyAsUnset, false, ref errors);
         if (raw is null)
         {
             return default;
         }
 
-        if (global::System.Enum.TryParse<T>(raw, ignoreCase: true, out var value))
+        if (System.Enum.TryParse<T>(raw, true, out var value))
         {
             return value;
         }
 
         RecordInvalid(
             ref errors, key, displayName, typeName, raw,
-            $"{typeName} value (expected one of: {string.Join(", ", global::System.Enum.GetNames<T>())})");
+            $"{typeName} value (expected one of: {string.Join(", ", System.Enum.GetNames<T>())})");
         return default;
     }
 
     /// <summary>
-    /// Passthrough for any type implementing <see cref="IParsable{T}"/>; parsed with
-    /// <see cref="CultureInfo.InvariantCulture"/> so config never depends on locale.
+    ///     Passthrough for any type implementing <see cref="IParsable{T}" />; parsed with
+    ///     <see cref="CultureInfo.InvariantCulture" /> so config never depends on locale.
     /// </summary>
     public static T Parsable<T>(
         IEnvProvider provider, string key, string displayName,
@@ -345,7 +356,7 @@ public static class SealedEnvLoader
         where T : IParsable<T>
     {
         var typeName = typeof(T).Name;
-        var raw = Resolve(provider, key, displayName, typeName, @default, required, allowEmpty, emptyAsUnset, unsetYieldsNull: false, ref errors);
+        var raw = Resolve(provider, key, displayName, typeName, @default, required, allowEmpty, emptyAsUnset, false, ref errors);
         if (raw is null)
         {
             return default!;
@@ -363,9 +374,9 @@ public static class SealedEnvLoader
     }
 
     /// <summary>
-    /// Passthrough for types with a custom parser (<see cref="EnvKeyAttribute.Parser"/>).
-    /// Generated code passes the parser as a static method group — AOT-safe, no
-    /// reflection. Failures of any exception flavor degrade into a structured error.
+    ///     Passthrough for types with a custom parser (<see cref="EnvKeyAttribute.Parser" />).
+    ///     Generated code passes the parser as a static method group — AOT-safe, no
+    ///     reflection. Failures of any exception flavor degrade into a structured error.
     /// </summary>
     public static T Custom<T>(
         IEnvProvider provider, string key, string displayName,
@@ -374,7 +385,7 @@ public static class SealedEnvLoader
         ref List<EnvError> errors)
     {
         var typeName = typeof(T).Name;
-        var raw = Resolve(provider, key, displayName, typeName, @default, required, allowEmpty, emptyAsUnset, unsetYieldsNull: false, ref errors);
+        var raw = Resolve(provider, key, displayName, typeName, @default, required, allowEmpty, emptyAsUnset, false, ref errors);
         if (raw is null)
         {
             return default!;
@@ -394,10 +405,10 @@ public static class SealedEnvLoader
     // collections
 
     /// <summary>
-    /// String list split on <paramref name="separator"/>, <c>'\' + separator</c>
-    /// escaped to a literal separator, entries whitespace-trimmed. A backslash
-    /// escapes only a following separator; any other backslash is literal.
-    /// Empty entries between separators are preserved.
+    ///     String list split on <paramref name="separator" />, <c>'\' + separator</c>
+    ///     escaped to a literal separator, entries whitespace-trimmed. A backslash
+    ///     escapes only a following separator; any other backslash is literal.
+    ///     Empty entries between separators are preserved.
     /// </summary>
     public static string[] StringArray(
         IEnvProvider provider, string key, string displayName,
@@ -405,7 +416,7 @@ public static class SealedEnvLoader
         char separator,
         ref List<EnvError> errors)
     {
-        var raw = Resolve(provider, key, displayName, "string[]", @default, required, allowEmpty, emptyAsUnset, unsetYieldsNull: false, ref errors);
+        var raw = Resolve(provider, key, displayName, "string[]", @default, required, allowEmpty, emptyAsUnset, false, ref errors);
         return raw is null ? [] : SplitEntries(raw, separator);
     }
 
@@ -434,6 +445,6 @@ public static class SealedEnvLoader
         }
 
         entries.Add(current.ToString().Trim());
-        return [.. entries];
+        return [.. entries,];
     }
 }

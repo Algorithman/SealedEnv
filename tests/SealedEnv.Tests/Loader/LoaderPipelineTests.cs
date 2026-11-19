@@ -1,9 +1,20 @@
+// ---------------------------------------------------------------------------------------
+// Solution: SealedEnv
+// Project: SealedEnv.Tests
+// Filename: LoaderPipelineTests.cs
+// 
+// Last modified: 2026-11-19 14:25
+// Created:       2026-11-19 11:11
+// 
+// Copyright: 2026 Algorithman
+// ---------------------------------------------------------------------------------------
+
 namespace SealedEnv.Tests.Loader;
 
 /// <summary>
-/// Cross-cutting pipeline guarantees: errors aggregate (never fail-fast), every
-/// helper shares one lookup/default/empty policy, and nothing ever throws for bad
-/// input. These are the invariants the generated Load()/TryLoad() members rely on.
+///     Cross-cutting pipeline guarantees: errors aggregate (never fail-fast), every
+///     helper shares one lookup/default/empty policy, and nothing ever throws for bad
+///     input. These are the invariants the generated Load()/TryLoad() members rely on.
 /// </summary>
 public class LoaderPipelineTests
 {
@@ -109,7 +120,7 @@ public class LoaderPipelineTests
         // fabricate a value; it is unset (→ default or Missing error).
         var env = TestEnv.With("MYAPP_PORT", "");
 
-        Assert.Equal(8080, env.Int("MYAPP_PORT", @default: "8080"));
+        Assert.Equal(8080, env.Int("MYAPP_PORT", "8080"));
         Assert.Empty(env.Errors);
 
         var unset = TestEnv.With("MYAPP_PORT", "");
@@ -123,6 +134,6 @@ public class LoaderPipelineTests
         var errors = new List<EnvError>();
 
         Assert.Throws<ArgumentNullException>(() =>
-            SealedEnvLoader.Int(null!, "MYAPP_PORT", "TestConfig.Port", null, required: false, allowEmpty: false, emptyAsUnset: true, ref errors));
+            SealedEnvLoader.Int(null!, "MYAPP_PORT", "TestConfig.Port", null, false, false, true, ref errors));
     }
 }

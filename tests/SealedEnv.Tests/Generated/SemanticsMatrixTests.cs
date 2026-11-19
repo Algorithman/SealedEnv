@@ -1,11 +1,20 @@
-using SealedEnv;
+// ---------------------------------------------------------------------------------------
+// Solution: SealedEnv
+// Project: SealedEnv.Tests
+// Filename: SemanticsMatrixTests.cs
+// 
+// Last modified: 2026-11-19 14:25
+// Created:       2026-11-19 12:11
+// 
+// Copyright: 2026 Algorithman
+// ---------------------------------------------------------------------------------------
 
 namespace SealedEnv.Tests.Generated;
 
 /// <summary>
-/// Carriers for the Phase 3 semantics matrix (SealedEnv-PLAN.md §3). One carrier
-/// per configuration row, with the EmptyAsUnset flag pinned explicitly so each
-/// matrix cell has exactly one owner.
+///     Carriers for the Phase 3 semantics matrix (SealedEnv-PLAN.md §3). One carrier
+///     per configuration row, with the EmptyAsUnset flag pinned explicitly so each
+///     matrix cell has exactly one owner.
 /// </summary>
 [SealedEnv(Prefix = "M_")] // EmptyAsUnset = true (default)
 internal sealed partial record ValueTypeRow([EnvKey] int Value);
@@ -26,7 +35,8 @@ internal sealed partial record NullableStringRowEmptyAsUnset([EnvKey] string? Va
 internal sealed partial record RequiredRow(
     [EnvKey(Required = true)] int Value,
     [EnvKey(Required = true)] string Name,
-    [EnvKey(Required = true, AllowEmpty = true)] string Tag);
+    [EnvKey(Required = true, AllowEmpty = true)]
+    string Tag);
 
 [SealedEnv(Prefix = "M_")] // EmptyAsUnset = true
 internal sealed partial record RequiredRowEmptyAsUnset([EnvKey(Required = true)] string Name);
@@ -40,9 +50,9 @@ internal sealed partial record DefaultRowKeepEmpty(
 internal sealed partial record DefaultRowEmptyAsUnset([EnvKey(Default = "42")] int Value);
 
 /// <summary>
-/// The Phase 3 semantics matrix, one test per cell, exercised through the
-/// generated TryLoad of the carriers above (TryLoad everywhere: it must also never
-/// throw — errors are the mechanism, exceptions are not).
+///     The Phase 3 semantics matrix, one test per cell, exercised through the
+///     generated TryLoad of the carriers above (TryLoad everywhere: it must also never
+///     throw — errors are the mechanism, exceptions are not).
 /// </summary>
 public class SemanticsMatrixTests
 {
@@ -65,7 +75,7 @@ public class SemanticsMatrixTests
     public void Value_type_empty_is_unset_under_the_default_flag()
     {
         var ok = ValueTypeRow.TryLoad(out var config, out var errors, new DictionaryEnvProvider(
-            new Dictionary<string, string?> { ["M_VALUE"] = "" }));
+            new Dictionary<string, string?> { ["M_VALUE"] = "", }));
 
         Assert.False(ok);
         Assert.Equal(EnvErrorCode.Missing, Assert.Single(errors).Code); // empty ≈ unset → Missing
@@ -75,7 +85,7 @@ public class SemanticsMatrixTests
     public void Value_type_empty_is_an_empty_error_when_empty_as_unset_is_off()
     {
         var ok = ValueTypeRowKeepEmpty.TryLoad(out var config, out var errors, new DictionaryEnvProvider(
-            new Dictionary<string, string?> { ["M_VALUE"] = "" }));
+            new Dictionary<string, string?> { ["M_VALUE"] = "", }));
 
         Assert.False(ok);
         Assert.Equal(EnvErrorCode.Empty, Assert.Single(errors).Code);
@@ -85,7 +95,7 @@ public class SemanticsMatrixTests
     public void Value_type_malformed_is_invalid()
     {
         var ok = ValueTypeRowKeepEmpty.TryLoad(out var config, out var errors, new DictionaryEnvProvider(
-            new Dictionary<string, string?> { ["M_VALUE"] = "abc" }));
+            new Dictionary<string, string?> { ["M_VALUE"] = "abc", }));
 
         Assert.False(ok);
         Assert.Equal(EnvErrorCode.Invalid, Assert.Single(errors).Code);
@@ -108,7 +118,7 @@ public class SemanticsMatrixTests
     public void String_empty_is_an_empty_error_when_empty_as_unset_is_off()
     {
         var ok = StringRow.TryLoad(out var config, out var errors, new DictionaryEnvProvider(
-            new Dictionary<string, string?> { ["M_VALUE"] = "" }));
+            new Dictionary<string, string?> { ["M_VALUE"] = "", }));
 
         Assert.False(ok);
         Assert.Equal(EnvErrorCode.Empty, Assert.Single(errors).Code);
@@ -119,7 +129,7 @@ public class SemanticsMatrixTests
     public void String_accepts_any_text_verbatim()
     {
         var ok = StringRow.TryLoad(out var config, out var errors, new DictionaryEnvProvider(
-            new Dictionary<string, string?> { ["M_VALUE"] = "  not <malformed> — just text \t" }));
+            new Dictionary<string, string?> { ["M_VALUE"] = "  not <malformed> — just text \t", }));
 
         Assert.True(ok);
         Assert.Equal("  not <malformed> — just text \t", config!.Value);
@@ -142,7 +152,7 @@ public class SemanticsMatrixTests
     public void Nullable_string_empty_is_the_empty_string_when_empty_as_unset_is_off()
     {
         var ok = NullableStringRow.TryLoad(out var config, out var errors, new DictionaryEnvProvider(
-            new Dictionary<string, string?> { ["M_VALUE"] = "" }));
+            new Dictionary<string, string?> { ["M_VALUE"] = "", }));
 
         Assert.True(ok);
         Assert.Equal(string.Empty, config!.Value);
@@ -153,13 +163,14 @@ public class SemanticsMatrixTests
     public void Nullable_string_empty_and_unset_both_resolve_to_null_under_the_default_flag()
     {
         var okEmpty = NullableStringRowEmptyAsUnset.TryLoad(out var emptyConfig, out var emptyErrors, new DictionaryEnvProvider(
-            new Dictionary<string, string?> { ["M_VALUE"] = "" }));
+            new Dictionary<string, string?> { ["M_VALUE"] = "", }));
 
         Assert.True(okEmpty);
         Assert.Null(emptyConfig!.Value);
         Assert.Empty(emptyErrors);
 
-        var okUnset = NullableStringRowEmptyAsUnset.TryLoad(out var unsetConfig, out var unsetErrors, new DictionaryEnvProvider(new Dictionary<string, string?>()));
+        var okUnset = NullableStringRowEmptyAsUnset.TryLoad(out var unsetConfig, out var unsetErrors,
+            new DictionaryEnvProvider(new Dictionary<string, string?>()));
 
         Assert.True(okUnset);
         Assert.Null(unsetConfig!.Value);
@@ -172,12 +183,12 @@ public class SemanticsMatrixTests
     public void Required_unset_is_missing_for_every_type()
     {
         var ok = RequiredRow.TryLoad(out var config, out var errors, new DictionaryEnvProvider(
-            new Dictionary<string, string?> { ["M_TAG"] = "t" })); // Tag present so only the unset rows report
+            new Dictionary<string, string?> { ["M_TAG"] = "t", })); // Tag present so only the unset rows report
 
         Assert.False(ok);
         Assert.Equal(2, errors.Count);
         Assert.All(errors, static e => Assert.Equal(EnvErrorCode.Missing, e.Code));
-        Assert.Equal(["M_VALUE", "M_NAME"], errors.Select(static e => e.Key).ToArray());
+        Assert.Equal(["M_VALUE", "M_NAME",], errors.Select(static e => e.Key).ToArray());
     }
 
     [Fact]
@@ -218,7 +229,7 @@ public class SemanticsMatrixTests
         // as unset, and unset + required is Missing. Either way it is an error; the
         // code is Missing, not Empty.
         var ok = RequiredRowEmptyAsUnset.TryLoad(out var config, out var errors, new DictionaryEnvProvider(
-            new Dictionary<string, string?> { ["M_NAME"] = "" }));
+            new Dictionary<string, string?> { ["M_NAME"] = "", }));
 
         Assert.False(ok);
         Assert.Equal(EnvErrorCode.Missing, Assert.Single(errors).Code);
@@ -260,7 +271,7 @@ public class SemanticsMatrixTests
         // the default does NOT rescue it (silently loading a default over an
         // explicitly-emptied variable would hide misconfiguration).
         var ok = DefaultRowKeepEmpty.TryLoad(out var config, out var errors, new DictionaryEnvProvider(
-            new Dictionary<string, string?> { ["M_VALUE"] = "" }));
+            new Dictionary<string, string?> { ["M_VALUE"] = "", }));
 
         Assert.False(ok);
         Assert.Equal(EnvErrorCode.Empty, Assert.Single(errors).Code);
@@ -270,7 +281,7 @@ public class SemanticsMatrixTests
     public void Default_rescues_empty_under_the_default_flag()
     {
         var ok = DefaultRowEmptyAsUnset.TryLoad(out var config, out var errors, new DictionaryEnvProvider(
-            new Dictionary<string, string?> { ["M_VALUE"] = "" }));
+            new Dictionary<string, string?> { ["M_VALUE"] = "", }));
 
         Assert.True(ok);
         Assert.Equal(42, config!.Value); // empty ≈ unset → default applies
@@ -281,7 +292,7 @@ public class SemanticsMatrixTests
     public void Present_value_beats_the_default_even_when_malformed()
     {
         var ok = DefaultRowEmptyAsUnset.TryLoad(out var config, out var errors, new DictionaryEnvProvider(
-            new Dictionary<string, string?> { ["M_VALUE"] = "abc" }));
+            new Dictionary<string, string?> { ["M_VALUE"] = "abc", }));
 
         Assert.False(ok);
         Assert.Equal(EnvErrorCode.Invalid, Assert.Single(errors).Code); // the default does not mask bad input

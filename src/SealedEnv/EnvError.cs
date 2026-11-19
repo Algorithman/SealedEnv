@@ -1,3 +1,14 @@
+// ---------------------------------------------------------------------------------------
+// Solution: SealedEnv
+// Project: SealedEnv
+// Filename: EnvError.cs
+// 
+// Last modified: 2026-11-19 14:25
+// Created:       2026-11-19 11:11
+// 
+// Copyright: 2026 Algorithman
+// ---------------------------------------------------------------------------------------
+
 namespace SealedEnv;
 
 /// <summary>Why a single environment binding failed.</summary>

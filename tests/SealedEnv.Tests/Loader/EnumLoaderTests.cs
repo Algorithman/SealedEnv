@@ -1,11 +1,22 @@
+// ---------------------------------------------------------------------------------------
+// Solution: SealedEnv
+// Project: SealedEnv.Tests
+// Filename: EnumLoaderTests.cs
+// 
+// Last modified: 2026-11-19 14:25
+// Created:       2026-11-19 11:11
+// 
+// Copyright: 2026 Algorithman
+// ---------------------------------------------------------------------------------------
+
 using System.Globalization;
 
 namespace SealedEnv.Tests.Loader;
 
 /// <summary>
-/// Type integrity for enums: member names parse case-insensitively, numeric values
-/// map onto the enum exactly like <see cref="Enum.Parse"/> — including the
-/// surprising corners, which are pinned here rather than left undefined.
+///     Type integrity for enums: member names parse case-insensitively, numeric values
+///     map onto the enum exactly like <see cref="Enum.Parse" /> — including the
+///     surprising corners, which are pinned here rather than left undefined.
 /// </summary>
 public class EnumLoaderTests
 {
@@ -35,7 +46,7 @@ public class EnumLoaderTests
     {
         var env = TestEnv.With("MYAPP_LEVEL", value);
 
-        Assert.Equal(default(LogLevel), env.Enum<LogLevel>("MYAPP_LEVEL"));
+        Assert.Equal(default, env.Enum<LogLevel>("MYAPP_LEVEL"));
         var error = env.SingleError;
         Assert.Equal(EnvErrorCode.Invalid, error.Code);
         Assert.Equal("MYAPP_LEVEL", error.Key);
@@ -63,7 +74,7 @@ public class EnumLoaderTests
     {
         var env = TestEnv.Empty();
 
-        Assert.Equal(LogLevel.Warning, env.Enum<LogLevel>("MYAPP_LEVEL", @default: "Warning"));
+        Assert.Equal(LogLevel.Warning, env.Enum<LogLevel>("MYAPP_LEVEL", "Warning"));
         Assert.Empty(env.Errors);
     }
 
@@ -72,7 +83,7 @@ public class EnumLoaderTests
     {
         var env = TestEnv.Empty();
 
-        env.Enum<LogLevel>("MYAPP_LEVEL", @default: "Fatal");
+        env.Enum<LogLevel>("MYAPP_LEVEL", "Fatal");
         Assert.Equal(EnvErrorCode.Invalid, env.SingleError.Code);
     }
 }

@@ -1,19 +1,19 @@
 <Solution>
-  <Folder Name="/benchmarks/">
-    <Project Path="benchmarks/SealedEnv.Benchmarks/SealedEnv.Benchmarks.csproj" />
-  </Folder>
-  <Folder Name="/samples/">
-    <Project Path="samples/SampleConsoleApp/SampleConsoleApp.csproj" />
-  </Folder>
-  <Folder Name="/src/">
-    <Project Path="src/SealedEnv/SealedEnv.csproj" />
-  </Folder>
-  <Folder Name="/src/SealedEnv/" />
-  <Folder Name="/src/SealedEnv/Generators/">
-    <Project Path="src/SealedEnv/Generators/SealedEnvGenerator.csproj" />
-  </Folder>
-  <Folder Name="/tests/">
-    <Project Path="tests/SealedEnv.Generator.Tests/SealedEnv.Generator.Tests.csproj" />
-    <Project Path="tests/SealedEnv.Tests/SealedEnv.Tests.csproj" />
-  </Folder>
+    <Folder Name="/benchmarks/">
+        <Project Path="benchmarks/SealedEnv.Benchmarks/SealedEnv.Benchmarks.csproj"/>
+    </Folder>
+    <Folder Name="/samples/">
+        <Project Path="samples/SampleConsoleApp/SampleConsoleApp.csproj"/>
+    </Folder>
+    <Folder Name="/src/">
+        <Project Path="src/SealedEnv/SealedEnv.csproj"/>
+    </Folder>
+    <Folder Name="/src/SealedEnv/"/>
+    <Folder Name="/src/SealedEnv/Generators/">
+        <Project Path="src/SealedEnv/Generators/SealedEnvGenerator.csproj"/>
+    </Folder>
+    <Folder Name="/tests/">
+        <Project Path="tests/SealedEnv.Generator.Tests/SealedEnv.Generator.Tests.csproj"/>
+        <Project Path="tests/SealedEnv.Tests/SealedEnv.Tests.csproj"/>
+    </Folder>
 </Solution>

@@ -1,19 +1,30 @@
+// ---------------------------------------------------------------------------------------
+// Solution: SealedEnv
+// Project: SealedEnvGenerator
+// Filename: EnvKeyDerivation.cs
+// 
+// Last modified: 2026-11-19 14:25
+// Created:       2026-11-19 12:11
+// 
+// Copyright: 2026 Algorithman
+// ---------------------------------------------------------------------------------------
+
 using System.Text;
 
 namespace SealedEnv.Generators;
 
 /// <summary>
-/// Derives the environment key from a parameter name.
+///     Derives the environment key from a parameter name.
 /// </summary>
 /// <remarks>
-/// Pinned rule (the plan's §4 "decide and pin the acronym rule" question): underscores
-/// are inserted ONLY at acronym-to-word boundaries — an uppercase letter that follows
-/// an uppercase letter and precedes a lowercase one ("APIKey" → <c>API_KEY</c>,
-/// "HTTPServer" → <c>HTTP_SERVER</c>). Everything else is uppercased verbatim, matching
-/// the plan's own examples: "DbConnection" → <c>DBCONNECTION</c>, "DbUrl" → <c>DBURL</c>,
-/// "ID" → <c>ID</c>, "Port" → <c>PORT</c>, "_port" → <c>PORT</c>. Leading underscores are
-/// stripped (the common <c>_field</c> convention); all other characters pass through
-/// unchanged, so "myKey" → <c>MYKEY</c>.
+///     Pinned rule (the plan's §4 "decide and pin the acronym rule" question): underscores
+///     are inserted ONLY at acronym-to-word boundaries — an uppercase letter that follows
+///     an uppercase letter and precedes a lowercase one ("APIKey" → <c>API_KEY</c>,
+///     "HTTPServer" → <c>HTTP_SERVER</c>). Everything else is uppercased verbatim, matching
+///     the plan's own examples: "DbConnection" → <c>DBCONNECTION</c>, "DbUrl" → <c>DBURL</c>,
+///     "ID" → <c>ID</c>, "Port" → <c>PORT</c>, "_port" → <c>PORT</c>. Leading underscores are
+///     stripped (the common <c>_field</c> convention); all other characters pass through
+///     unchanged, so "myKey" → <c>MYKEY</c>.
 /// </remarks>
 internal static class EnvKeyDerivation
 {
@@ -35,11 +46,7 @@ internal static class EnvKeyDerivation
         for (var i = 0; i < name.Length; i++)
         {
             var current = name[i];
-            if (char.IsUpper(current)
-                && i > 0
-                && char.IsUpper(name[i - 1])
-                && i + 1 < name.Length
-                && char.IsLower(name[i + 1]))
+            if (char.IsUpper(current) && i > 0 && char.IsUpper(name[i - 1]) && i + 1 < name.Length && char.IsLower(name[i + 1]))
             {
                 builder.Append('_');
             }

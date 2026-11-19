@@ -1,13 +1,24 @@
+// ---------------------------------------------------------------------------------------
+// Solution: SealedEnv
+// Project: SealedEnv.Tests
+// Filename: AttributeSurfaceTests.cs
+// 
+// Last modified: 2026-11-19 14:25
+// Created:       2026-11-19 12:11
+// 
+// Copyright: 2026 Algorithman
+// ---------------------------------------------------------------------------------------
+
 using System.Reflection;
 using SealedEnv.Tests.Loader;
 
 namespace SealedEnv.Tests;
 
 /// <summary>
-/// The attribute surface is a frozen contract (SealedEnv-PLAN.md §1): the generator
-/// parses these classes, so any accidental signature change must break here first.
-/// The carrier record at the bottom compiles against the whole surface — change a
-/// property name or default and this file stops building.
+///     The attribute surface is a frozen contract (SealedEnv-PLAN.md §1): the generator
+///     parses these classes, so any accidental signature change must break here first.
+///     The carrier record at the bottom compiles against the whole surface — change a
+///     property name or default and this file stops building.
 /// </summary>
 public class AttributeSurfaceTests
 {
@@ -23,7 +34,7 @@ public class AttributeSurfaceTests
     [Fact]
     public void SealedEnv_properties_are_settable()
     {
-        var attribute = new SealedEnvAttribute { Prefix = "MYAPP_", EmptyAsUnset = false };
+        var attribute = new SealedEnvAttribute { Prefix = "MYAPP_", EmptyAsUnset = false, };
 
         Assert.Equal("MYAPP_", attribute.Prefix);
         Assert.False(attribute.EmptyAsUnset);
@@ -97,12 +108,12 @@ public class AttributeSurfaceTests
     {
         // Compilation of this test project is the assertion: every named argument
         // below exists with this exact name, type and meaning.
-        var carrier = new FrozenSurfaceCarrier(8080, "db", LogLevel.Info, ["a"]);
+        var carrier = new FrozenSurfaceCarrier(8080, "db", LogLevel.Info, ["a",]);
 
         Assert.Equal(8080, carrier.Port);
         Assert.Equal("db", carrier.DbConnection);
         Assert.Equal(LogLevel.Info, carrier.Level);
-        Assert.Equal(["a"], carrier.Hosts);
+        Assert.Equal(["a",], carrier.Hosts);
     }
 }
 
@@ -113,9 +124,6 @@ public class AttributeSurfaceTests
 internal sealed partial record FrozenSurfaceCarrier(
     [EnvKey("FROZEN_PORT", Default = "1", Required = false, AllowEmpty = false, Separator = ',', Description = "port")]
     int Port,
-    [EnvKey(Required = true)]
-    string DbConnection,
-    [EnvKey]
-    LogLevel Level,
-    [EnvKey]
-    string[] Hosts);
+    [EnvKey(Required = true)] string DbConnection,
+    [EnvKey] LogLevel Level,
+    [EnvKey] string[] Hosts);

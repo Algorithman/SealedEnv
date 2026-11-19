@@ -1,12 +1,23 @@
+// ---------------------------------------------------------------------------------------
+// Solution: SealedEnv
+// Project: SealedEnv.Tests
+// Filename: BooleanLoaderTests.cs
+// 
+// Last modified: 2026-11-19 14:25
+// Created:       2026-11-19 11:11
+// 
+// Copyright: 2026 Algorithman
+// ---------------------------------------------------------------------------------------
+
 using System.Globalization;
 
 namespace SealedEnv.Tests.Loader;
 
 /// <summary>
-/// Type integrity for the boolean helper: exactly the six documented tokens
-/// (1/0/true/false/on/off, case-insensitive), everything else rejected. Bool is
-/// deliberately stricter than the numeric helpers — no surrounding whitespace,
-/// no "yes"/"enabled" and similar aliases.
+///     Type integrity for the boolean helper: exactly the six documented tokens
+///     (1/0/true/false/on/off, case-insensitive), everything else rejected. Bool is
+///     deliberately stricter than the numeric helpers — no surrounding whitespace,
+///     no "yes"/"enabled" and similar aliases.
 /// </summary>
 public class BooleanLoaderTests
 {

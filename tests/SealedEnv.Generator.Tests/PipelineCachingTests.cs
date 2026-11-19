@@ -1,45 +1,56 @@
+// ---------------------------------------------------------------------------------------
+// Solution: SealedEnv
+// Project: SealedEnv.Generator.Tests
+// Filename: PipelineCachingTests.cs
+// 
+// Last modified: 2026-11-19 14:25
+// Created:       2026-11-19 13:11
+// 
+// Copyright: 2026 Algorithman
+// ---------------------------------------------------------------------------------------
+
 using Microsoft.CodeAnalysis;
 
 namespace SealedEnv.Generator.Tests;
 
 /// <summary>
-/// Phase 4 hardening: the incremental pipeline must reuse unchanged inputs. The
-/// carrier's syntax tree is shared between the two compilations and only an
-/// unrelated file changes — with value-model equality, no step may re-execute
-/// (every tracked output reports Cached/Unchanged, none Changed).
+///     Phase 4 hardening: the incremental pipeline must reuse unchanged inputs. The
+///     carrier's syntax tree is shared between the two compilations and only an
+///     unrelated file changes — with value-model equality, no step may re-execute
+///     (every tracked output reports Cached/Unchanged, none Changed).
 /// </summary>
 public class PipelineCachingTests
 {
     private const string Carrier = """
-        using System;
-        using SealedEnv;
+                                   using System;
+                                   using SealedEnv;
 
-        namespace TestCode;
+                                   namespace TestCode;
 
-        [SealedEnv(Prefix = "MYAPP_")]
-        public sealed partial record AppConfig([EnvKey] int Port);
-        """;
+                                   [SealedEnv(Prefix = "MYAPP_")]
+                                   public sealed partial record AppConfig([EnvKey] int Port);
+                                   """;
 
     private const string UnrelatedFirst = """
-        namespace TestCode;
+                                          namespace TestCode;
 
-        // Something the config carrier has nothing to do with.
-        public static class Unrelated
-        {
-            public static int Value => 1;
-        }
-        """;
+                                          // Something the config carrier has nothing to do with.
+                                          public static class Unrelated
+                                          {
+                                              public static int Value => 1;
+                                          }
+                                          """;
 
     private const string UnrelatedSecond = """
-        namespace TestCode;
+                                           namespace TestCode;
 
-        // Edited comment AND body — enough to change the tree completely.
-        public static class Unrelated
-        {
-            public static int Value => 2;
-            public static int Other => 3;
-        }
-        """;
+                                           // Edited comment AND body — enough to change the tree completely.
+                                           public static class Unrelated
+                                           {
+                                               public static int Value => 2;
+                                               public static int Other => 3;
+                                           }
+                                           """;
 
     [Fact]
     public void An_edit_to_an_unrelated_file_does_not_regenerate_the_carrier()

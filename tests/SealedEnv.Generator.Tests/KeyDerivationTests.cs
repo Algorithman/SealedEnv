@@ -1,11 +1,22 @@
+// ---------------------------------------------------------------------------------------
+// Solution: SealedEnv
+// Project: SealedEnv.Generator.Tests
+// Filename: KeyDerivationTests.cs
+// 
+// Last modified: 2026-11-19 14:25
+// Created:       2026-11-19 12:11
+// 
+// Copyright: 2026 Algorithman
+// ---------------------------------------------------------------------------------------
+
 using SealedEnv.Generators;
 
 namespace SealedEnv.Generator.Tests;
 
 /// <summary>
-/// Pins the key-derivation rule decided in Phase 2: underscores ONLY at
-/// acronym-to-word boundaries, everything else uppercased verbatim — matching the
-/// plan's own examples (DbConnection → DBCONNECTION, DbUrl → DBURL, ID → ID).
+///     Pins the key-derivation rule decided in Phase 2: underscores ONLY at
+///     acronym-to-word boundaries, everything else uppercased verbatim — matching the
+///     plan's own examples (DbConnection → DBCONNECTION, DbUrl → DBURL, ID → ID).
 /// </summary>
 public class KeyDerivationTests
 {

@@ -9,10 +9,10 @@
   <!-- The crucial wiring: reference the runtime lib normally and attach the
        generator as an analyzer (SealedEnv-PLAN.md §2). -->
   <ItemGroup>
-    <ProjectReference Include="..\..\src\SealedEnv\SealedEnv.csproj" />
+    <ProjectReference Include="..\..\src\SealedEnv\SealedEnv.csproj"/>
     <ProjectReference Include="..\..\src\SealedEnv\Generators\SealedEnvGenerator.csproj"
                       OutputItemType="Analyzer"
-                      ReferenceOutputAssembly="false" />
+                      ReferenceOutputAssembly="false"/>
   </ItemGroup>
 
 </Project>

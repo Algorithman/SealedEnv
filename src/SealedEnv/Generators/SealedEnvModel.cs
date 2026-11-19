@@ -1,15 +1,23 @@
-using System.Collections.Generic;
+// ---------------------------------------------------------------------------------------
+// Solution: SealedEnv
+// Project: SealedEnvGenerator
+// Filename: SealedEnvModel.cs
+// 
+// Last modified: 2026-11-19 14:25
+// Created:       2026-11-19 13:11
+// 
+// Copyright: 2026 Algorithman
+// ---------------------------------------------------------------------------------------
+
 using System.Collections.Immutable;
 using System.Globalization;
-using System.Linq;
-using System.Threading;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace SealedEnv.Generators;
 
-/// <summary>Which <see cref="SealedEnvLoader"/> helper a member's generated call targets.</summary>
+/// <summary>Which <see cref="SealedEnvLoader" /> helper a member's generated call targets.</summary>
 internal enum MemberKind
 {
     Int,
@@ -46,10 +54,10 @@ internal sealed record EnvMemberModel(
 }
 
 /// <summary>
-/// The full extraction of one [SealedEnv] carrier. A hand-written value object
-/// (not a record): <see cref="Location"/> must not participate in equality, and
-/// ImmutableArray members need sequence comparison — this Equals is what lets the
-/// incremental pipeline skip emission when nothing relevant changed.
+///     The full extraction of one [SealedEnv] carrier. A hand-written value object
+///     (not a record): <see cref="Location" /> must not participate in equality, and
+///     ImmutableArray members need sequence comparison — this Equals is what lets the
+///     incremental pipeline skip emission when nothing relevant changed.
 /// </summary>
 internal sealed class EnvTargetModel
 {
@@ -85,18 +93,23 @@ internal sealed class EnvTargetModel
     public ImmutableArray<DiagnosticInfo> Diagnostics { get; }
     public Location DiagnosticLocation { get; }
 
-    public bool Equals(EnvTargetModel? other) =>
-        other is not null
-        && Namespace == other.Namespace
-        && TypeName == other.TypeName
-        && TypeDeclaration == other.TypeDeclaration
-        && IsValueType == other.IsValueType
-        && EmptyAsUnset == other.EmptyAsUnset
-        && SkipGeneration == other.SkipGeneration
-        && Members.SequenceEqual(other.Members)
-        && Diagnostics.SequenceEqual(other.Diagnostics);
+    public bool Equals(EnvTargetModel? other)
+    {
+        return other is not null &&
+               Namespace == other.Namespace &&
+               TypeName == other.TypeName &&
+               TypeDeclaration == other.TypeDeclaration &&
+               IsValueType == other.IsValueType &&
+               EmptyAsUnset == other.EmptyAsUnset &&
+               SkipGeneration == other.SkipGeneration &&
+               Members.SequenceEqual(other.Members) &&
+               Diagnostics.SequenceEqual(other.Diagnostics);
+    }
 
-    public override bool Equals(object? obj) => Equals(obj as EnvTargetModel);
+    public override bool Equals(object? obj)
+    {
+        return Equals(obj as EnvTargetModel);
+    }
 
     public override int GetHashCode()
     {
@@ -114,13 +127,16 @@ internal sealed class EnvTargetModel
 }
 
 /// <summary>
-/// Extracts an <see cref="EnvTargetModel"/> from a type attributed with
-/// <c>[SealedEnv]</c>. Pure data out — no symbols survive, so the incremental
-/// cache compares models by value.
+///     Extracts an <see cref="EnvTargetModel" /> from a type attributed with
+///     <c>[SealedEnv]</c>. Pure data out — no symbols survive, so the incremental
+///     cache compares models by value.
 /// </summary>
 internal static class SealedEnvModel
 {
     private const string AttributeNamespace = "SealedEnv";
+
+    /// <summary>Members the generated partial adds to the user's carrier type.</summary>
+    internal static readonly string[] GeneratedMemberNames = ["Load", "TryLoad", "SealedEnvBind",];
 
     public static EnvTargetModel Transform(GeneratorAttributeSyntaxContext context, CancellationToken cancellationToken)
     {
@@ -143,7 +159,7 @@ internal static class SealedEnvModel
         }
 
         var diagnostics = ImmutableArray.CreateBuilder<DiagnosticInfo>();
-        var effectivePrefix = prefix is { Length: > 0 } nonEmptyPrefix ? nonEmptyPrefix : string.Empty;
+        var effectivePrefix = prefix is { Length: > 0, } nonEmptyPrefix ? nonEmptyPrefix : string.Empty;
         var attributeLocation = AttributeLocation(attributeData);
 
         // SVE0005: reference-type carriers must be sealed (plan §1); record structs
@@ -152,7 +168,7 @@ internal static class SealedEnvModel
         {
             diagnostics.Add(new DiagnosticInfo(
                 "SVE0005",
-                [typeSymbol.Name],
+                [typeSymbol.Name,],
                 attributeLocation));
             return NotGeneratable(typeSymbol, emptyAsUnset, diagnostics, attributeLocation);
         }
@@ -163,7 +179,7 @@ internal static class SealedEnvModel
         {
             diagnostics.Add(new DiagnosticInfo(
                 "SVE0100",
-                [$"Type '{typeSymbol.Name}' is a ref struct; ref struct [SealedEnv] carriers are not supported"],
+                [$"Type '{typeSymbol.Name}' is a ref struct; ref struct [SealedEnv] carriers are not supported",],
                 attributeLocation));
             return NotGeneratable(typeSymbol, emptyAsUnset, diagnostics, attributeLocation);
         }
@@ -176,7 +192,7 @@ internal static class SealedEnvModel
             {
                 diagnostics.Add(new DiagnosticInfo(
                     "SVE0008",
-                    [typeSymbol.Name, generatedName],
+                    [typeSymbol.Name, generatedName,],
                     attributeLocation));
                 return NotGeneratable(typeSymbol, emptyAsUnset, diagnostics, attributeLocation);
             }
@@ -227,8 +243,9 @@ internal static class SealedEnvModel
         INamedTypeSymbol typeSymbol,
         bool emptyAsUnset,
         ImmutableArray<DiagnosticInfo>.Builder diagnostics,
-        Location attributeLocation) =>
-        new(
+        Location attributeLocation)
+    {
+        return new EnvTargetModel(
             NamespaceName(typeSymbol),
             typeSymbol.Name,
             string.Empty,
@@ -238,32 +255,37 @@ internal static class SealedEnvModel
             ImmutableArray<EnvMemberModel>.Empty,
             diagnostics.ToImmutable(),
             attributeLocation);
+    }
 
     /// <summary>
-    /// Location of the attribute application, used to anchor diagnostics.
+    ///     Location of the attribute application, used to anchor diagnostics.
     /// </summary>
-    internal static Location AttributeLocation(AttributeData attributeData) =>
-        attributeData.ApplicationSyntaxReference is { } syntaxReference
+    internal static Location AttributeLocation(AttributeData attributeData)
+    {
+        return attributeData.ApplicationSyntaxReference is { } syntaxReference
             ? syntaxReference.SyntaxTree.GetLocation(syntaxReference.Span)
             : Location.None;
+    }
 
-    private static string? NamespaceName(INamedTypeSymbol typeSymbol) =>
-        typeSymbol.ContainingNamespace is { IsGlobalNamespace: false } ns ? ns.ToDisplayString() : null;
-
-    /// <summary>Members the generated partial adds to the user's carrier type.</summary>
-    internal static readonly string[] GeneratedMemberNames = ["Load", "TryLoad", "SealedEnvBind"];
-
-    private static ParameterListSyntax? ParameterList(SyntaxNode node) => node switch
+    private static string? NamespaceName(INamedTypeSymbol typeSymbol)
     {
-        RecordDeclarationSyntax record => record.ParameterList,
-        ClassDeclarationSyntax @class => @class.ParameterList,
-        StructDeclarationSyntax @struct => @struct.ParameterList,
-        _ => null,
-    };
+        return typeSymbol.ContainingNamespace is { IsGlobalNamespace: false, } ns ? ns.ToDisplayString() : null;
+    }
+
+    private static ParameterListSyntax? ParameterList(SyntaxNode node)
+    {
+        return node switch
+        {
+            RecordDeclarationSyntax record => record.ParameterList,
+            ClassDeclarationSyntax @class => @class.ParameterList,
+            StructDeclarationSyntax @struct => @struct.ParameterList,
+            _ => null,
+        };
+    }
 
     /// <summary>
-    /// Renders the partial type declaration header. Returns null (with a diagnostic)
-    /// for shapes the generator does not support yet: nested and generic carriers.
+    ///     Renders the partial type declaration header. Returns null (with a diagnostic)
+    ///     for shapes the generator does not support yet: nested and generic carriers.
     /// </summary>
     private static string? BuildTypeDeclaration(INamedTypeSymbol typeSymbol, ImmutableArray<DiagnosticInfo>.Builder diagnostics, Location location)
     {
@@ -271,7 +293,7 @@ internal static class SealedEnvModel
         {
             diagnostics.Add(new DiagnosticInfo(
                 "SVE0100",
-                [$"Type '{typeSymbol.Name}' is nested; nested [SealedEnv] carriers are not supported yet"],
+                [$"Type '{typeSymbol.Name}' is nested; nested [SealedEnv] carriers are not supported yet",],
                 location));
             return null;
         }
@@ -280,7 +302,7 @@ internal static class SealedEnvModel
         {
             diagnostics.Add(new DiagnosticInfo(
                 "SVE0100",
-                [$"Type '{typeSymbol.Name}' is generic; generic [SealedEnv] carriers are not supported yet"],
+                [$"Type '{typeSymbol.Name}' is generic; generic [SealedEnv] carriers are not supported yet",],
                 location));
             return null;
         }
@@ -306,7 +328,9 @@ internal static class SealedEnvModel
 
         var kind = typeSymbol.IsRecord
             ? typeSymbol.IsValueType ? "record struct" : "record"
-            : typeSymbol.IsValueType ? "struct" : "class";
+            : typeSymbol.IsValueType
+                ? "struct"
+                : "class";
 
         return $"{accessibility} {modifiers}partial {kind}".Trim();
     }
@@ -325,7 +349,7 @@ internal static class SealedEnvModel
         {
             diagnostics.Add(new DiagnosticInfo(
                 "SVE0007",
-                [parameter.Name],
+                [parameter.Name,],
                 parameter.Locations.FirstOrDefault() ?? Location.None));
             return;
         }
@@ -368,7 +392,7 @@ internal static class SealedEnvModel
         {
             diagnostics.Add(new DiagnosticInfo(
                 "SVE0002",
-                [parameter.Name, parameter.Type.ToDisplayString()],
+                [parameter.Name, parameter.Type.ToDisplayString(),],
                 parameter.Locations.FirstOrDefault() ?? Location.None));
             return;
         }
@@ -381,7 +405,7 @@ internal static class SealedEnvModel
         {
             diagnostics.Add(new DiagnosticInfo(
                 "SVE0006",
-                [parser.ToDisplayString(), parameter.Name],
+                [parser.ToDisplayString(), parameter.Name,],
                 attributeLocation));
             return;
         }
@@ -392,7 +416,7 @@ internal static class SealedEnvModel
         {
             diagnostics.Add(new DiagnosticInfo(
                 "SVE0004",
-                [defaultValue, parameter.Name, parameter.Type.ToDisplayString()],
+                [defaultValue, parameter.Name, parameter.Type.ToDisplayString(),],
                 attributeLocation));
             return;
         }
@@ -413,15 +437,18 @@ internal static class SealedEnvModel
     }
 
     /// <summary>
-    /// Whether the constructor argument needs a <c>!</c>: the helper may return null
-    /// (NullableString, Uri) or the parsed reference type itself may be null-declared.
+    ///     Whether the constructor argument needs a <c>!</c>: the helper may return null
+    ///     (NullableString, Uri) or the parsed reference type itself may be null-declared.
     /// </summary>
-    private static bool PassWithNullForgiving(ITypeSymbol type, MemberKind kind) => kind switch
+    private static bool PassWithNullForgiving(ITypeSymbol type, MemberKind kind)
     {
-        MemberKind.NullableString or MemberKind.Uri => true,
-        MemberKind.Parsable or MemberKind.Custom => type.IsReferenceType,
-        _ => false,
-    };
+        return kind switch
+        {
+            MemberKind.NullableString or MemberKind.Uri => true,
+            MemberKind.Parsable or MemberKind.Custom => type.IsReferenceType,
+            _ => false,
+        };
+    }
 
     /// <summary>SVE0003: two members resolving to the same key silently share one value.</summary>
     private static void DetectDuplicateKeys(
@@ -430,41 +457,45 @@ internal static class SealedEnvModel
         Location location)
     {
         foreach (var group in members
-            .GroupBy(static m => m.Key, StringComparer.Ordinal)
-            .Where(static g => g.Count() > 1))
+                     .GroupBy(static m => m.Key, StringComparer.Ordinal)
+                     .Where(static g => g.Count() > 1))
         {
             var names = string.Join(" and ", group.Select(static m => $"'{m.ParameterName}'"));
             diagnostics.Add(new DiagnosticInfo(
                 "SVE0003",
-                [names, group.Key],
+                [names, group.Key,],
                 location));
         }
     }
 
-    internal static bool IsEnvKeyAttribute(AttributeData attribute) =>
-        attribute.AttributeClass is { } attributeClass
-        && attributeClass.MetadataName == "EnvKeyAttribute"
-        && attributeClass.ContainingNamespace is { IsGlobalNamespace: false } ns
-        && ns.ToDisplayString() == AttributeNamespace;
+    internal static bool IsEnvKeyAttribute(AttributeData attribute)
+    {
+        return attribute.AttributeClass is { } attributeClass &&
+               attributeClass.MetadataName == "EnvKeyAttribute" &&
+               attributeClass.ContainingNamespace is { IsGlobalNamespace: false, } ns &&
+               ns.ToDisplayString() == AttributeNamespace;
+    }
 
     /// <summary>
-    /// SVE0006: the generated call passes <c>ParserType.Parse</c> as a
-    /// <c>Func&lt;string, T&gt;</c> method group — public, static, non-generic, one
-    /// string in, the parameter's exact type out.
+    ///     SVE0006: the generated call passes <c>ParserType.Parse</c> as a
+    ///     <c>Func&lt;string, T&gt;</c> method group — public, static, non-generic, one
+    ///     string in, the parameter's exact type out.
     /// </summary>
-    private static bool ParserHasValidParseMethod(INamedTypeSymbol parser, ITypeSymbol parameterType) =>
-        parser.GetMembers("Parse").OfType<IMethodSymbol>().Any(method =>
-            method.IsStatic
-            && method.DeclaredAccessibility == Accessibility.Public
-            && method.Arity == 0
-            && method.Parameters.Length == 1
-            && method.Parameters[0].Type.SpecialType == SpecialType.System_String
-            && SymbolEqualityComparer.Default.Equals(method.ReturnType, parameterType));
+    private static bool ParserHasValidParseMethod(INamedTypeSymbol parser, ITypeSymbol parameterType)
+    {
+        return parser.GetMembers("Parse").OfType<IMethodSymbol>().Any(method =>
+            method.IsStatic &&
+            method.DeclaredAccessibility == Accessibility.Public &&
+            method.Arity == 0 &&
+            method.Parameters.Length == 1 &&
+            method.Parameters[0].Type.SpecialType == SpecialType.System_String &&
+            SymbolEqualityComparer.Default.Equals(method.ReturnType, parameterType));
+    }
 
     /// <summary>
-    /// SVE0004: mirrors the runtime parse rules per type (invariant culture). Types
-    /// without a compile-time-checkable parser (string, string[], IParsable&lt;T&gt;,
-    /// custom Parser) accept anything here and are validated at runtime.
+    ///     SVE0004: mirrors the runtime parse rules per type (invariant culture). Types
+    ///     without a compile-time-checkable parser (string, string[], IParsable&lt;T&gt;,
+    ///     custom Parser) accept anything here and are validated at runtime.
     /// </summary>
     private static bool DefaultParsesAs(MemberKind kind, string defaultValue, ITypeSymbol parameterType)
     {
@@ -478,11 +509,11 @@ internal static class SealedEnvModel
                 return double.TryParse(defaultValue, NumberStyles.Float, CultureInfo.InvariantCulture, out _);
             case MemberKind.Bool:
                 // exact token set of the runtime helper, OrdinalIgnoreCase
-                return defaultValue.Equals("true", StringComparison.OrdinalIgnoreCase)
-                    || defaultValue.Equals("false", StringComparison.OrdinalIgnoreCase)
-                    || defaultValue.Equals("on", StringComparison.OrdinalIgnoreCase)
-                    || defaultValue.Equals("off", StringComparison.OrdinalIgnoreCase)
-                    || defaultValue is "1" or "0";
+                return defaultValue.Equals("true", StringComparison.OrdinalIgnoreCase) ||
+                       defaultValue.Equals("false", StringComparison.OrdinalIgnoreCase) ||
+                       defaultValue.Equals("on", StringComparison.OrdinalIgnoreCase) ||
+                       defaultValue.Equals("off", StringComparison.OrdinalIgnoreCase) ||
+                       defaultValue is "1" or "0";
             case MemberKind.TimeSpan:
                 return TimeSpan.TryParse(defaultValue, CultureInfo.InvariantCulture, out _);
             case MemberKind.Uri:
@@ -497,9 +528,9 @@ internal static class SealedEnvModel
     }
 
     /// <summary>
-    /// Mirrors runtime <c>Enum.TryParse</c>: member names case-insensitively (comma
-    /// separated for flag combos), or any number in the underlying type's range —
-    /// defined member or not.
+    ///     Mirrors runtime <c>Enum.TryParse</c>: member names case-insensitively (comma
+    ///     separated for flag combos), or any number in the underlying type's range —
+    ///     defined member or not.
     /// </summary>
     private static bool EnumDefaultMatches(INamedTypeSymbol enumType, string defaultValue)
     {
@@ -517,8 +548,8 @@ internal static class SealedEnvModel
                 continue;
             }
 
-            if (long.TryParse(token, NumberStyles.Integer, CultureInfo.InvariantCulture, out _)
-                || ulong.TryParse(token, NumberStyles.Integer, CultureInfo.InvariantCulture, out _))
+            if (long.TryParse(token, NumberStyles.Integer, CultureInfo.InvariantCulture, out _) ||
+                ulong.TryParse(token, NumberStyles.Integer, CultureInfo.InvariantCulture, out _))
             {
                 continue;
             }
@@ -530,10 +561,10 @@ internal static class SealedEnvModel
     }
 
     /// <summary>
-    /// Picks the loader helper for a parameter type. Unsupported shapes return null
-    /// (reported as SVE0002): no Nullable&lt;T&gt; values, no parsed-element arrays,
-    /// no collections other than string[], and no shadowing risk (System types are
-    /// matched by namespace + name, not by name alone).
+    ///     Picks the loader helper for a parameter type. Unsupported shapes return null
+    ///     (reported as SVE0002): no Nullable&lt;T&gt; values, no parsed-element arrays,
+    ///     no collections other than string[], and no shadowing risk (System types are
+    ///     matched by namespace + name, not by name alone).
     /// </summary>
     private static MemberKind? Route(ITypeSymbol type, INamedTypeSymbol? parser)
     {
@@ -592,16 +623,20 @@ internal static class SealedEnvModel
         return null;
     }
 
-    private static bool IsSystemType(INamedTypeSymbol named, string name) =>
-        named.Name == name
-        && named.OriginalDefinition.ContainingNamespace is { IsGlobalNamespace: false } containing
-        && containing.ToDisplayString() == "System";
+    private static bool IsSystemType(INamedTypeSymbol named, string name)
+    {
+        return named.Name == name &&
+               named.OriginalDefinition.ContainingNamespace is { IsGlobalNamespace: false, } containing &&
+               containing.ToDisplayString() == "System";
+    }
 
-    private static bool ImplementsParsableOfSelf(INamedTypeSymbol named) =>
-        named.AllInterfaces.Any(i =>
-            i.OriginalDefinition is { MetadataName: "IParsable`1" } definition
-            && definition.ContainingNamespace is { IsGlobalNamespace: false } ns
-            && ns.ToDisplayString() == "System"
-            && i.TypeArguments.Length == 1
-            && SymbolEqualityComparer.Default.Equals(i.TypeArguments[0], named));
+    private static bool ImplementsParsableOfSelf(INamedTypeSymbol named)
+    {
+        return named.AllInterfaces.Any(i =>
+            i.OriginalDefinition is { MetadataName: "IParsable`1", } definition &&
+            definition.ContainingNamespace is { IsGlobalNamespace: false, } ns &&
+            ns.ToDisplayString() == "System" &&
+            i.TypeArguments.Length == 1 &&
+            SymbolEqualityComparer.Default.Equals(i.TypeArguments[0], named));
+    }
 }

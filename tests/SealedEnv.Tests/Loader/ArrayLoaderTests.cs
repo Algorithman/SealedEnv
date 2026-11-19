@@ -1,17 +1,28 @@
+// ---------------------------------------------------------------------------------------
+// Solution: SealedEnv
+// Project: SealedEnv.Tests
+// Filename: ArrayLoaderTests.cs
+// 
+// Last modified: 2026-11-19 14:25
+// Created:       2026-11-19 11:11
+// 
+// Copyright: 2026 Algorithman
+// ---------------------------------------------------------------------------------------
+
 namespace SealedEnv.Tests.Loader;
 
 /// <summary>
-/// Type integrity for list values: split on the separator, <c>'\' + separator</c>
-/// escapes to a literal separator, entries trimmed. The exact corners (empty
-/// entries, lone separators, non-escaping backslashes) are pinned here.
+///     Type integrity for list values: split on the separator, <c>'\' + separator</c>
+///     escapes to a literal separator, entries trimmed. The exact corners (empty
+///     entries, lone separators, non-escaping backslashes) are pinned here.
 /// </summary>
 public class ArrayLoaderTests
 {
     [Theory]
-    [InlineData("a,b,c", new[] { "a", "b", "c" })]
-    [InlineData("a, b , c", new[] { "a", "b", "c" })] // entries are trimmed
-    [InlineData("solo", new[] { "solo" })] // no separator → single entry
-    [InlineData("a\t", new[] { "a" })] // tabs are whitespace, trimmed too
+    [InlineData("a,b,c", new[] { "a", "b", "c", })]
+    [InlineData("a, b , c", new[] { "a", "b", "c", })] // entries are trimmed
+    [InlineData("solo", new[] { "solo", })] // no separator → single entry
+    [InlineData("a\t", new[] { "a", })] // tabs are whitespace, trimmed too
     public void StringArray_splits_and_trims(string value, string[] expected)
     {
         var env = TestEnv.With("MYAPP_HOSTS", value);
@@ -25,7 +36,7 @@ public class ArrayLoaderTests
     {
         var env = TestEnv.With("MYAPP_HOSTS", @"a\,b,c");
 
-        Assert.Equal(new[] { "a,b", "c" }, env.StringArray("MYAPP_HOSTS"));
+        Assert.Equal(new[] { "a,b", "c", }, env.StringArray("MYAPP_HOSTS"));
         Assert.Empty(env.Errors);
     }
 
@@ -36,7 +47,7 @@ public class ArrayLoaderTests
         // literal, and commas are never special when the separator is ';'.
         var env = TestEnv.With("MYAPP_PATHS", @"C:\tools;D:\data;E\;x;a,b");
 
-        Assert.Equal(new[] { @"C:\tools", @"D:\data", "E;x", "a,b" }, env.StringArray("MYAPP_PATHS", separator: ';'));
+        Assert.Equal(new[] { @"C:\tools", @"D:\data", "E;x", "a,b", }, env.StringArray("MYAPP_PATHS", ';'));
         Assert.Empty(env.Errors);
     }
 
@@ -46,7 +57,7 @@ public class ArrayLoaderTests
         // "a\b,c": the backslash is followed by 'b', not a separator → literal.
         var env = TestEnv.With("MYAPP_HOSTS", @"a\b,c");
 
-        Assert.Equal(new[] { @"a\b", "c" }, env.StringArray("MYAPP_HOSTS"));
+        Assert.Equal(new[] { @"a\b", "c", }, env.StringArray("MYAPP_HOSTS"));
         Assert.Empty(env.Errors);
     }
 
@@ -57,15 +68,15 @@ public class ArrayLoaderTests
         // positional lists. Callers who care about holes see them.
         var env = TestEnv.With("MYAPP_HOSTS", "a,,b");
 
-        Assert.Equal(new[] { "a", "", "b" }, env.StringArray("MYAPP_HOSTS"));
+        Assert.Equal(new[] { "a", "", "b", }, env.StringArray("MYAPP_HOSTS"));
         Assert.Empty(env.Errors);
     }
 
     [Theory]
-    [InlineData(",", new[] { "", "" })]
-    [InlineData("a,", new[] { "a", "" })]
-    [InlineData(",a", new[] { "", "a" })]
-    [InlineData("", new[] { "" })] // reachable only via AllowEmpty
+    [InlineData(",", new[] { "", "", })]
+    [InlineData("a,", new[] { "a", "", })]
+    [InlineData(",a", new[] { "", "a", })]
+    [InlineData("", new[] { "", })] // reachable only via AllowEmpty
     public void Lone_and_leading_separators_split_consistently(string value, string[] expected)
     {
         var env = TestEnv.With("MYAPP_HOSTS", value);
@@ -89,7 +100,7 @@ public class ArrayLoaderTests
     {
         var env = TestEnv.Empty();
 
-        Assert.Equal(new[] { "x", "y" }, env.StringArray("MYAPP_HOSTS", @default: "x,y"));
+        Assert.Equal(new[] { "x", "y", }, env.StringArray("MYAPP_HOSTS", @default: "x,y"));
         Assert.Empty(env.Errors);
     }
 
@@ -98,7 +109,7 @@ public class ArrayLoaderTests
     {
         var env = TestEnv.With("MYAPP_HOSTS", "");
 
-        Assert.Equal(new[] { "x", "y" }, env.StringArray("MYAPP_HOSTS", @default: "x,y"));
+        Assert.Equal(new[] { "x", "y", }, env.StringArray("MYAPP_HOSTS", @default: "x,y"));
         Assert.Empty(env.Errors);
     }
 
@@ -116,7 +127,7 @@ public class ArrayLoaderTests
     {
         var env = TestEnv.With("MYAPP_HOSTS", "prod-a,prod-b");
 
-        Assert.Equal(new[] { "prod-a", "prod-b" }, env.StringArray("MYAPP_HOSTS", @default: "x,y"));
+        Assert.Equal(new[] { "prod-a", "prod-b", }, env.StringArray("MYAPP_HOSTS", @default: "x,y"));
         Assert.Empty(env.Errors);
     }
 

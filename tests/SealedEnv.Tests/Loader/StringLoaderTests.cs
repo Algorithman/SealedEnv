@@ -1,10 +1,21 @@
+// ---------------------------------------------------------------------------------------
+// Solution: SealedEnv
+// Project: SealedEnv.Tests
+// Filename: StringLoaderTests.cs
+// 
+// Last modified: 2026-11-19 14:25
+// Created:       2026-11-19 12:11
+// 
+// Copyright: 2026 Algorithman
+// ---------------------------------------------------------------------------------------
+
 namespace SealedEnv.Tests.Loader;
 
 /// <summary>
-/// Type integrity for strings: a string can never be "malformed", so the integrity
-/// questions are the unset/empty boundary — what counts as a value, what counts as
-/// absence, and that values are passed through byte-for-byte without trimming or
-/// re-encoding.
+///     Type integrity for strings: a string can never be "malformed", so the integrity
+///     questions are the unset/empty boundary — what counts as a value, what counts as
+///     absence, and that values are passed through byte-for-byte without trimming or
+///     re-encoding.
 /// </summary>
 public class StringLoaderTests
 {
@@ -47,7 +58,7 @@ public class StringLoaderTests
     {
         var env = TestEnv.Empty();
 
-        Assert.Equal("localhost", env.String("MYAPP_DB", @default: "localhost"));
+        Assert.Equal("localhost", env.String("MYAPP_DB", "localhost"));
         Assert.Empty(env.Errors);
     }
 
@@ -56,7 +67,7 @@ public class StringLoaderTests
     {
         var env = TestEnv.With("MYAPP_DB", "prod-db");
 
-        Assert.Equal("prod-db", env.String("MYAPP_DB", @default: "localhost"));
+        Assert.Equal("prod-db", env.String("MYAPP_DB", "localhost"));
         Assert.Empty(env.Errors);
     }
 
@@ -76,7 +87,7 @@ public class StringLoaderTests
     {
         var env = TestEnv.With("MYAPP_DB", "");
 
-        Assert.Equal("localhost", env.String("MYAPP_DB", @default: "localhost"));
+        Assert.Equal("localhost", env.String("MYAPP_DB", "localhost"));
         Assert.Empty(env.Errors);
     }
 
@@ -134,7 +145,7 @@ public class StringLoaderTests
     {
         var env = TestEnv.Empty();
 
-        Assert.Equal("latest", env.NullableString("MYAPP_TAG", @default: "latest"));
+        Assert.Equal("latest", env.NullableString("MYAPP_TAG", "latest"));
         Assert.Empty(env.Errors);
     }
 

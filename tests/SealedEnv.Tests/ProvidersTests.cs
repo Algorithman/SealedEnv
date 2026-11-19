@@ -1,10 +1,21 @@
+// ---------------------------------------------------------------------------------------
+// Solution: SealedEnv
+// Project: SealedEnv.Tests
+// Filename: ProvidersTests.cs
+// 
+// Last modified: 2026-11-19 14:25
+// Created:       2026-11-19 11:11
+// 
+// Copyright: 2026 Algorithman
+// ---------------------------------------------------------------------------------------
+
 namespace SealedEnv.Tests;
 
 /// <summary>
-/// The provider seam: <see cref="DictionaryEnvProvider"/> must be able to express
-/// all three environment states a binding can encounter (absent, present,
-/// present-but-empty, present-but-null), and <see cref="EnvironmentEnvProvider"/>
-/// must be a thin pass-through to process state.
+///     The provider seam: <see cref="DictionaryEnvProvider" /> must be able to express
+///     all three environment states a binding can encounter (absent, present,
+///     present-but-empty, present-but-null), and <see cref="EnvironmentEnvProvider" />
+///     must be a thin pass-through to process state.
 /// </summary>
 public class ProvidersTests
 {
@@ -29,7 +40,7 @@ public class ProvidersTests
     {
         // Real env vars are case-sensitive on Linux and case-insensitive on Windows.
         // The test seam pins case-sensitivity so tests behave identically everywhere.
-        var provider = new DictionaryEnvProvider(new Dictionary<string, string?> { ["MYAPP_PORT"] = "8080" });
+        var provider = new DictionaryEnvProvider(new Dictionary<string, string?> { ["MYAPP_PORT"] = "8080", });
 
         Assert.Equal("8080", provider.Get("MYAPP_PORT"));
         Assert.Null(provider.Get("myapp_port"));
@@ -74,7 +85,7 @@ public class ProvidersTests
         // The whole point of IEnvProvider: identical lookups, swappable backends.
         IEnvProvider fromEnvironment = EnvironmentEnvProvider.Instance;
         IEnvProvider fromDictionary = new DictionaryEnvProvider(
-            new Dictionary<string, string?> { ["SEALENVTESTS_PROVIDER_PROBE"] = "same" });
+            new Dictionary<string, string?> { ["SEALENVTESTS_PROVIDER_PROBE"] = "same", });
 
         try
         {

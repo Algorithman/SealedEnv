@@ -1,11 +1,22 @@
+// ---------------------------------------------------------------------------------------
+// Solution: SealedEnv
+// Project: SealedEnv.Tests
+// Filename: NumericLoaderTests.cs
+// 
+// Last modified: 2026-11-19 14:25
+// Created:       2026-11-19 11:11
+// 
+// Copyright: 2026 Algorithman
+// ---------------------------------------------------------------------------------------
+
 using System.Globalization;
 
 namespace SealedEnv.Tests.Loader;
 
 /// <summary>
-/// Type integrity for the numeric helpers: well-formed values parse, anything
-/// malformed is rejected as an <see cref="EnvErrorCode.Invalid"/> error — never a
-/// crash, never a silently-wrong number, and never locale-dependent.
+///     Type integrity for the numeric helpers: well-formed values parse, anything
+///     malformed is rejected as an <see cref="EnvErrorCode.Invalid" /> error — never a
+///     crash, never a silently-wrong number, and never locale-dependent.
 /// </summary>
 public class NumericLoaderTests
 {
@@ -63,7 +74,7 @@ public class NumericLoaderTests
         // parse pipeline must still produce a structured error, not a crash.
         var env = TestEnv.Empty();
 
-        Assert.Equal(0, env.Int("MYAPP_PORT", @default: "abc"));
+        Assert.Equal(0, env.Int("MYAPP_PORT", "abc"));
         Assert.Equal(EnvErrorCode.Invalid, env.SingleError.Code);
         Assert.Contains("\"abc\"", env.SingleError.Message);
     }

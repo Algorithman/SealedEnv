@@ -1,3 +1,14 @@
+// ---------------------------------------------------------------------------------------
+// Solution: SealedEnv
+// Project: SampleConsoleApp
+// Filename: Program.cs
+// 
+// Last modified: 2026-11-19 14:25
+// Created:       2026-11-19 12:11
+// 
+// Copyright: 2026 Algorithman
+// ---------------------------------------------------------------------------------------
+
 using SealedEnv;
 
 // Phase 2 exit criteria: the sample app loads a real record from real environment
@@ -7,8 +18,8 @@ try
 {
     var config = SampleConfig.Load();
     Console.WriteLine(
-        $"Loaded {nameof(SampleConfig)}: Port={config.Port}, Db=\"{config.DbConnection}\", "
-        + $"Shutdown={config.ShutdownTimeout}, Hosts=[{string.Join(", ", config.Hosts)}]");
+        $"Loaded {nameof(SampleConfig)}: Port={config.Port}, Db=\"{config.DbConnection}\", " +
+        $"Shutdown={config.ShutdownTimeout}, Hosts=[{string.Join(", ", config.Hosts)}]");
     return 0;
 }
 catch (SealedEnvException exception)

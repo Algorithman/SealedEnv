@@ -1,36 +1,53 @@
+// ---------------------------------------------------------------------------------------
+// Solution: SealedEnv
+// Project: SealedEnv.Tests
+// Filename: GeneratedLoadTests.cs
+// 
+// Last modified: 2026-11-19 14:25
+// Created:       2026-11-19 13:11
+// 
+// Copyright: 2026 Algorithman
+// ---------------------------------------------------------------------------------------
+
 using System.Globalization;
 using SealedEnv.Tests.Loader;
 
 namespace SealedEnv.Tests.Generated;
 
 /// <summary>
-/// The real end-to-end contract: [SealedEnv] records whose Load()/TryLoad() members
-/// were generated during THIS project's compilation, loaded from an in-memory
-/// provider. If the generator regresses, this file stops compiling.
+///     The real end-to-end contract: [SealedEnv] records whose Load()/TryLoad() members
+///     were generated during THIS project's compilation, loaded from an in-memory
+///     provider. If the generator regresses, this file stops compiling.
 /// </summary>
 public class GeneratedLoadTests
 {
-    private static DictionaryEnvProvider FullHappyEnv() => new(new Dictionary<string, string?>
+    private static DictionaryEnvProvider FullHappyEnv()
     {
-        ["E2E_PORT"] = "9090",
-        ["E2E_DBCONNECTION"] = "Host=db.internal;Database=app",
-        ["E2E_VERBOSE"] = "on",
-        ["E2E_SHUTDOWNTIMEOUT"] = "00:01:00",
-        ["E2E_CALLBACKURL"] = "https://callback.example.com/hook",
-        ["E2E_TENANTID"] = "6f9619ff-8b86-d011-b42d-00c04fc964ff",
-        ["E2E_LEVEL"] = "warning",
-        ["E2E_HOSTS"] = "a.example.com, b.example.com",
-        ["E2E_TAG"] = "",
-        ["E2E_GATEWAYPORT"] = "443",
-        ["E2E_VAT"] = "0.2",
-    });
+        return new DictionaryEnvProvider(new Dictionary<string, string?>
+        {
+            ["E2E_PORT"] = "9090",
+            ["E2E_DBCONNECTION"] = "Host=db.internal;Database=app",
+            ["E2E_VERBOSE"] = "on",
+            ["E2E_SHUTDOWNTIMEOUT"] = "00:01:00",
+            ["E2E_CALLBACKURL"] = "https://callback.example.com/hook",
+            ["E2E_TENANTID"] = "6f9619ff-8b86-d011-b42d-00c04fc964ff",
+            ["E2E_LEVEL"] = "warning",
+            ["E2E_HOSTS"] = "a.example.com, b.example.com",
+            ["E2E_TAG"] = "",
+            ["E2E_GATEWAYPORT"] = "443",
+            ["E2E_VAT"] = "0.2",
+        });
+    }
 
-    private static DictionaryEnvProvider BrokenEnv() => new(new Dictionary<string, string?>
+    private static DictionaryEnvProvider BrokenEnv()
     {
-        ["E2E_PORT"] = "abc", // Invalid
-        // E2E_DBCONNECTION missing → Missing (required)
-        ["E2E_VERBOSE"] = "maybe", // Invalid
-    });
+        return new DictionaryEnvProvider(new Dictionary<string, string?>
+        {
+            ["E2E_PORT"] = "abc", // Invalid
+            // E2E_DBCONNECTION missing → Missing (required)
+            ["E2E_VERBOSE"] = "maybe", // Invalid
+        });
+    }
 
     [Fact]
     public void Load_binds_every_member_of_the_full_carrier()
@@ -44,7 +61,7 @@ public class GeneratedLoadTests
         Assert.Equal("https://callback.example.com/hook", config.CallbackUrl!.ToString());
         Assert.Equal(new Guid("6f9619ff-8b86-d011-b42d-00c04fc964ff"), config.TenantId);
         Assert.Equal(LogLevel.Warning, config.Level);
-        Assert.Equal(["a.example.com", "b.example.com"], config.Hosts); // entries trimmed
+        Assert.Equal(["a.example.com", "b.example.com",], config.Hosts); // entries trimmed
         Assert.Equal(string.Empty, config.Tag); // AllowEmpty admits the empty string
         Assert.Equal(new Port(443), config.GatewayPort); // IParsable<T> route
         Assert.Equal(0.2m, config.Vat.Value); // custom Parser route
@@ -54,7 +71,7 @@ public class GeneratedLoadTests
     public void Load_falls_back_to_defaults_when_only_required_variables_are_set()
     {
         var config = DefaultsConfig.Load(new DictionaryEnvProvider(
-            new Dictionary<string, string?> { ["E2E_DBCONNECTION"] = "Host=db" }));
+            new Dictionary<string, string?> { ["E2E_DBCONNECTION"] = "Host=db", }));
 
         Assert.Equal(8080, config.Port);
         Assert.Equal("Host=db", config.DbConnection);
@@ -71,10 +88,10 @@ public class GeneratedLoadTests
 
         Assert.Equal(2, exception.Errors.Count);
         Assert.Equal(
-            [EnvErrorCode.Invalid, EnvErrorCode.Missing],
+            [EnvErrorCode.Invalid, EnvErrorCode.Missing,],
             exception.Errors.Select(static e => e.Code).ToArray());
         Assert.Equal(
-            ["E2E_PORT", "E2E_DBCONNECTION"],
+            ["E2E_PORT", "E2E_DBCONNECTION",],
             exception.Errors.Select(static e => e.Key).ToArray());
 
         // The message is the user-facing startup report: every bad variable at once.
@@ -129,7 +146,7 @@ public class GeneratedLoadTests
         Assert.Equal(10, settings.Retries); // from the attribute default
 
         var loaded = Settings.Load(new DictionaryEnvProvider(
-            new Dictionary<string, string?> { ["S_RETRIES"] = "5" }));
+            new Dictionary<string, string?> { ["S_RETRIES"] = "5", }));
         Assert.Equal(5, loaded.Retries);
     }
 
@@ -137,7 +154,7 @@ public class GeneratedLoadTests
     public void Primary_constructor_classes_load_too()
     {
         var host = HostSettings.Load(new DictionaryEnvProvider(
-            new Dictionary<string, string?> { ["S_HOST"] = "db.internal" }));
+            new Dictionary<string, string?> { ["S_HOST"] = "db.internal", }));
 
         Assert.Equal("db.internal", host.Host);
     }
@@ -146,7 +163,7 @@ public class GeneratedLoadTests
     public void Global_namespace_carriers_load()
     {
         var carrier = GlobalNamespaceCarrier.Load(new DictionaryEnvProvider(
-            new Dictionary<string, string?> { ["GLOBAL_PORT"] = "7" }));
+            new Dictionary<string, string?> { ["GLOBAL_PORT"] = "7", }));
 
         Assert.Equal(7, carrier.Port);
     }

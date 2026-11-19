@@ -1,18 +1,26 @@
-using System.Collections.Generic;
+// ---------------------------------------------------------------------------------------
+// Solution: SealedEnv
+// Project: SealedEnvGenerator
+// Filename: SealedEnvEmitter.cs
+// 
+// Last modified: 2026-11-19 14:25
+// Created:       2026-11-19 12:11
+// 
+// Copyright: 2026 Algorithman
+// ---------------------------------------------------------------------------------------
+
 using System.Collections.Immutable;
-using System.Linq;
 using System.Text;
-using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 
 namespace SealedEnv.Generators;
 
 /// <summary>
-/// Renders the generated partial type with Load/TryLoad/SealedEnvBind.
-/// Thin on purpose: every parse decision lives in the runtime
-/// <see cref="SealedEnvLoader"/> helpers, so generated code is one call per member.
-/// All references are global::-qualified and the output is a file-scoped namespace,
-/// so nothing collides with user code or ambient usings.
+///     Renders the generated partial type with Load/TryLoad/SealedEnvBind.
+///     Thin on purpose: every parse decision lives in the runtime
+///     <see cref="SealedEnvLoader" /> helpers, so generated code is one call per member.
+///     All references are global::-qualified and the output is a file-scoped namespace,
+///     so nothing collides with user code or ambient usings.
 /// </summary>
 internal static class SealedEnvEmitter
 {
@@ -25,7 +33,7 @@ internal static class SealedEnvEmitter
         builder.AppendLine("#nullable enable");
         builder.AppendLine();
 
-        if (target.Namespace is { Length: > 0 } @namespace)
+        if (target.Namespace is { Length: > 0, } @namespace)
         {
             builder.AppendLine($"namespace {@namespace};");
             builder.AppendLine();
@@ -44,17 +52,19 @@ internal static class SealedEnvEmitter
         return builder.ToString();
     }
 
-    public static string HintName(EnvTargetModel target) =>
-        target.Namespace is { Length: > 0 } @namespace
+    public static string HintName(EnvTargetModel target)
+    {
+        return target.Namespace is { Length: > 0, } @namespace
             ? $"{@namespace}.{target.TypeName}.SealedEnv.g.cs"
             : $"{target.TypeName}.SealedEnv.g.cs";
+    }
 
     private static void EmitLoad(StringBuilder builder, EnvTargetModel target, string generatorVersion)
     {
         builder.AppendLine($"    [global::System.CodeDom.Compiler.GeneratedCodeAttribute(\"SealedEnvGenerator\", \"{generatorVersion}\")]");
         builder.AppendLine($"    public static {target.TypeName} Load(global::SealedEnv.IEnvProvider? provider = null)");
         builder.AppendLine("    {");
-        builder.AppendLine($"        var bound = SealedEnvBind(provider ?? global::SealedEnv.EnvironmentEnvProvider.Instance, out var __errors);");
+        builder.AppendLine("        var bound = SealedEnvBind(provider ?? global::SealedEnv.EnvironmentEnvProvider.Instance, out var __errors);");
         builder.AppendLine("        if (bound is null)");
         builder.AppendLine("        {");
         builder.AppendLine("            throw new global::SealedEnv.SealedEnvException(__errors);");
@@ -83,7 +93,8 @@ internal static class SealedEnvEmitter
     private static void EmitBind(StringBuilder builder, EnvTargetModel target, string generatorVersion)
     {
         builder.AppendLine($"    [global::System.CodeDom.Compiler.GeneratedCodeAttribute(\"SealedEnvGenerator\", \"{generatorVersion}\")]");
-        builder.AppendLine($"    private static {target.TypeName}? SealedEnvBind(global::SealedEnv.IEnvProvider provider, out global::System.Collections.Generic.List<global::SealedEnv.EnvError> __errors)");
+        builder.AppendLine(
+            $"    private static {target.TypeName}? SealedEnvBind(global::SealedEnv.IEnvProvider provider, out global::System.Collections.Generic.List<global::SealedEnv.EnvError> __errors)");
         builder.AppendLine("    {");
         builder.AppendLine("        __errors = new global::System.Collections.Generic.List<global::SealedEnv.EnvError>();");
         builder.AppendLine();
@@ -105,26 +116,30 @@ internal static class SealedEnvEmitter
         builder.AppendLine("    }");
     }
 
-    private static string HelperCall(EnvTargetModel target, EnvMemberModel member, string displayNamePrefix) =>
-        "global::SealedEnv.SealedEnvLoader." + (member.Kind switch
-        {
-            MemberKind.Int => $"Int({Args(target, member, displayNamePrefix)})",
-            MemberKind.Long => $"Long({Args(target, member, displayNamePrefix)})",
-            MemberKind.Double => $"Double({Args(target, member, displayNamePrefix)})",
-            MemberKind.Bool => $"Bool({Args(target, member, displayNamePrefix)})",
-            MemberKind.String => $"String({Args(target, member, displayNamePrefix)})",
-            MemberKind.NullableString => $"NullableString({Args(target, member, displayNamePrefix)})",
-            MemberKind.TimeSpan => $"TimeSpan({Args(target, member, displayNamePrefix)})",
-            MemberKind.Uri => $"Uri({Args(target, member, displayNamePrefix)})",
-            MemberKind.Guid => $"Guid({Args(target, member, displayNamePrefix)})",
-            MemberKind.Enum => $"Enum<{member.TypeText}>({Args(target, member, displayNamePrefix)})",
-            MemberKind.Parsable => $"Parsable<{member.TypeText}>({Args(target, member, displayNamePrefix)})",
-            MemberKind.Custom => $"Custom<{member.TypeText}>({Args(target, member, displayNamePrefix, customParser: true)})",
-            MemberKind.StringArray => $"StringArray({Args(target, member, displayNamePrefix, separator: true)})",
-            _ => throw new System.InvalidOperationException($"Unknown member kind: {member.Kind}"),
-        });
+    private static string HelperCall(EnvTargetModel target, EnvMemberModel member, string displayNamePrefix)
+    {
+        return "global::SealedEnv.SealedEnvLoader." +
+               (member.Kind switch
+               {
+                   MemberKind.Int => $"Int({Args(target, member, displayNamePrefix)})",
+                   MemberKind.Long => $"Long({Args(target, member, displayNamePrefix)})",
+                   MemberKind.Double => $"Double({Args(target, member, displayNamePrefix)})",
+                   MemberKind.Bool => $"Bool({Args(target, member, displayNamePrefix)})",
+                   MemberKind.String => $"String({Args(target, member, displayNamePrefix)})",
+                   MemberKind.NullableString => $"NullableString({Args(target, member, displayNamePrefix)})",
+                   MemberKind.TimeSpan => $"TimeSpan({Args(target, member, displayNamePrefix)})",
+                   MemberKind.Uri => $"Uri({Args(target, member, displayNamePrefix)})",
+                   MemberKind.Guid => $"Guid({Args(target, member, displayNamePrefix)})",
+                   MemberKind.Enum => $"Enum<{member.TypeText}>({Args(target, member, displayNamePrefix)})",
+                   MemberKind.Parsable => $"Parsable<{member.TypeText}>({Args(target, member, displayNamePrefix)})",
+                   MemberKind.Custom => $"Custom<{member.TypeText}>({Args(target, member, displayNamePrefix, true)})",
+                   MemberKind.StringArray => $"StringArray({Args(target, member, displayNamePrefix, separator: true)})",
+                   _ => throw new InvalidOperationException($"Unknown member kind: {member.Kind}"),
+               });
+    }
 
-    private static string Args(EnvTargetModel target, EnvMemberModel member, string displayNamePrefix, bool customParser = false, bool separator = false)
+    private static string Args(EnvTargetModel target, EnvMemberModel member, string displayNamePrefix, bool customParser = false,
+        bool separator = false)
     {
         var args = new StringBuilder(256);
         args.Append("provider, ");
@@ -148,11 +163,19 @@ internal static class SealedEnvEmitter
         return args.ToString();
     }
 
-    private static string ConstructorArguments(ImmutableArray<EnvMemberModel> members) =>
-        string.Join(", ", members.Select(m => m.PassWithNullForgiving ? m.VariableName + "!" : m.VariableName));
+    private static string ConstructorArguments(ImmutableArray<EnvMemberModel> members)
+    {
+        return string.Join(", ", members.Select(m => m.PassWithNullForgiving ? m.VariableName + "!" : m.VariableName));
+    }
 
     /// <summary>String literals are escaped by Roslyn itself — keys and defaults can contain anything.</summary>
-    private static string Literal(string value) => SymbolDisplay.FormatLiteral(value, quote: true);
+    private static string Literal(string value)
+    {
+        return SymbolDisplay.FormatLiteral(value, true);
+    }
 
-    private static string CharLiteral(char value) => SymbolDisplay.FormatLiteral(value, quote: true);
+    private static string CharLiteral(char value)
+    {
+        return SymbolDisplay.FormatLiteral(value, true);
+    }
 }

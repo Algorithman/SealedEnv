@@ -1,12 +1,23 @@
+// ---------------------------------------------------------------------------------------
+// Solution: SealedEnv
+// Project: SealedEnv.Tests
+// Filename: ParsableLoaderTests.cs
+// 
+// Last modified: 2026-11-19 14:25
+// Created:       2026-11-19 11:11
+// 
+// Copyright: 2026 Algorithman
+// ---------------------------------------------------------------------------------------
+
 using System.Globalization;
 
 namespace SealedEnv.Tests.Loader;
 
 /// <summary>
-/// Type integrity for the <see cref="IParsable{T}"/> passthrough: the custom type's
-/// own parser is the authority, and every way it can fail (FormatException,
-/// OverflowException, custom exceptions) must degrade into a structured
-/// <see cref="EnvError"/> instead of crashing the load.
+///     Type integrity for the <see cref="IParsable{T}" /> passthrough: the custom type's
+///     own parser is the authority, and every way it can fail (FormatException,
+///     OverflowException, custom exceptions) must degrade into a structured
+///     <see cref="EnvError" /> instead of crashing the load.
 /// </summary>
 public class ParsableLoaderTests
 {
@@ -26,7 +37,7 @@ public class ParsableLoaderTests
         // decides what is valid, the loader only routes failures into EnvError.
         var env = TestEnv.With("MYAPP_PORT", "-5");
 
-        Assert.Equal(default(Port), env.Parsable<Port>("MYAPP_PORT"));
+        Assert.Equal(default, env.Parsable<Port>("MYAPP_PORT"));
         var error = env.SingleError;
         Assert.Equal(EnvErrorCode.Invalid, error.Code);
         Assert.Equal("MYAPP_PORT", error.Key);
@@ -42,7 +53,7 @@ public class ParsableLoaderTests
     {
         var env = TestEnv.With("MYAPP_PORT", value);
 
-        Assert.Equal(default(Port), env.Parsable<Port>("MYAPP_PORT", allowEmpty: true));
+        Assert.Equal(default, env.Parsable<Port>("MYAPP_PORT", allowEmpty: true));
         Assert.Equal(EnvErrorCode.Invalid, env.SingleError.Code);
         Assert.Contains($"\"{value}\"", env.SingleError.Message);
     }
@@ -52,7 +63,7 @@ public class ParsableLoaderTests
     {
         var env = TestEnv.Empty();
 
-        Assert.Equal(new Port(3000), env.Parsable<Port>("MYAPP_PORT", @default: "3000"));
+        Assert.Equal(new Port(3000), env.Parsable<Port>("MYAPP_PORT", "3000"));
         Assert.Empty(env.Errors);
     }
 
@@ -61,7 +72,7 @@ public class ParsableLoaderTests
     {
         var env = TestEnv.Empty();
 
-        env.Parsable<Port>("MYAPP_PORT", @default: "not-a-port");
+        env.Parsable<Port>("MYAPP_PORT", "not-a-port");
         Assert.Equal(EnvErrorCode.Invalid, env.SingleError.Code);
         Assert.Equal("Port", env.SingleError.TypeName);
     }

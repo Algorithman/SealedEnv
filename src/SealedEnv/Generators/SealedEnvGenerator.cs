@@ -1,28 +1,43 @@
-using System.Collections.Generic;
-using System.Collections.Immutable;
+// ---------------------------------------------------------------------------------------
+// Solution: SealedEnv
+// Project: SealedEnvGenerator
+// Filename: SealedEnvGenerator.cs
+// 
+// Last modified: 2026-11-19 14:25
+// Created:       2026-11-19 13:11
+// 
+// Copyright: 2026 Algorithman
+// ---------------------------------------------------------------------------------------
+
+using System.Text;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Text;
 
 namespace SealedEnv.Generators;
 
 /// <summary>
-/// SealedEnv source generator: for every type attributed with
-/// <c>[SealedEnv]</c>, emits a partial type adding <c>Load()</c>/<c>TryLoad()</c>
-/// members that bind the primary-constructor parameters to environment variables.
+///     SealedEnv source generator: for every type attributed with
+///     <c>[SealedEnv]</c>, emits a partial type adding <c>Load()</c>/<c>TryLoad()</c>
+///     members that bind the primary-constructor parameters to environment variables.
 /// </summary>
 /// <remarks>
-/// Incremental pipeline: <c>ForAttributeWithMetadataName</c> over the attribute's
-/// metadata name (<c>SealedEnv.SealedEnvAttribute</c>) feeding a value model
-/// (see <see cref="EnvTargetModel.Equals"/>) into the emitter — unrelated edits do
-/// not re-run emission.
+///     Incremental pipeline: <c>ForAttributeWithMetadataName</c> over the attribute's
+///     metadata name (<c>SealedEnv.SealedEnvAttribute</c>) feeding a value model
+///     (see <see cref="EnvTargetModel.Equals" />) into the emitter — unrelated edits do
+///     not re-run emission.
 /// </remarks>
 [Generator(LanguageNames.CSharp)]
 public sealed class SealedEnvGenerator : IIncrementalGenerator
 {
+    private static string GeneratorVersion =>
+        typeof(SealedEnvGenerator).Assembly.GetName().Version?.ToString() ?? "0.0.0";
+
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         var targets = context.SyntaxProvider.ForAttributeWithMetadataName(
             "SealedEnv.SealedEnvAttribute",
-            static (node, _) => node is Microsoft.CodeAnalysis.CSharp.Syntax.TypeDeclarationSyntax,
+            static (node, _) => node is TypeDeclarationSyntax,
             static (context, cancellationToken) => SealedEnvModel.Transform(context, cancellationToken));
 
         context.RegisterSourceOutput(targets, static (productionContext, target) =>
@@ -41,9 +56,9 @@ public sealed class SealedEnvGenerator : IIncrementalGenerator
             {
                 productionContext.AddSource(
                     SealedEnvEmitter.HintName(target),
-                    Microsoft.CodeAnalysis.Text.SourceText.From(
+                    SourceText.From(
                         SealedEnvEmitter.Emit(target, GeneratorVersion),
-                        System.Text.Encoding.UTF8));
+                        Encoding.UTF8));
             }
         });
 
@@ -68,20 +83,22 @@ public sealed class SealedEnvGenerator : IIncrementalGenerator
         });
     }
 
-    private static string GeneratorVersion =>
-        typeof(SealedEnvGenerator).Assembly.GetName().Version?.ToString() ?? "0.0.0";
-
     /// <summary>
-    /// Value equality for stray-detection outputs, so unchanged diagnostics are
-    /// cached across unrelated edits (Location is deliberately excluded).
+    ///     Value equality for stray-detection outputs, so unchanged diagnostics are
+    ///     cached across unrelated edits (Location is deliberately excluded).
     /// </summary>
     private sealed class DiagnosticInfoComparer : IEqualityComparer<DiagnosticInfo?>
     {
-        public static readonly DiagnosticInfoComparer Instance = new();
+        public static readonly DiagnosticInfoComparer Instance = new DiagnosticInfoComparer();
 
-        public bool Equals(DiagnosticInfo? x, DiagnosticInfo? y) =>
-            x is null ? y is null : x.Equals(y);
+        public bool Equals(DiagnosticInfo? x, DiagnosticInfo? y)
+        {
+            return x is null ? y is null : x.Equals(y);
+        }
 
-        public int GetHashCode(DiagnosticInfo? obj) => obj?.GetHashCode() ?? 0;
+        public int GetHashCode(DiagnosticInfo? obj)
+        {
+            return obj?.GetHashCode() ?? 0;
+        }
     }
 }

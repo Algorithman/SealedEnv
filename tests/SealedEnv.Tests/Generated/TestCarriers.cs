@@ -1,13 +1,23 @@
+// ---------------------------------------------------------------------------------------
+// Solution: SealedEnv
+// Project: SealedEnv.Tests
+// Filename: TestCarriers.cs
+// 
+// Last modified: 2026-11-19 14:25
+// Created:       2026-11-19 12:11
+// 
+// Copyright: 2026 Algorithman
+// ---------------------------------------------------------------------------------------
+
 using System.Globalization;
-using SealedEnv;
 using SealedEnv.Tests.Loader;
 
 namespace SealedEnv.Tests.Generated;
 
 /// <summary>
-/// Compile-time proof that the generator's output compiles against this project
-/// (the generator is attached here as an analyzer). These partial records get
-/// Load()/TryLoad() members generated during the test build itself.
+///     Compile-time proof that the generator's output compiles against this project
+///     (the generator is attached here as an analyzer). These partial records get
+///     Load()/TryLoad() members generated during the test build itself.
 /// </summary>
 [SealedEnv(Prefix = "E2E_")]
 internal sealed partial record FullConfig(
@@ -44,12 +54,17 @@ internal sealed partial class HostSettings([EnvKey(Default = "localhost")] strin
 /// <summary>Custom-parsed type with a reference-type parser route (EnvKeyAttribute.Parser).</summary>
 internal sealed class VatRate
 {
-    private VatRate(decimal value) => Value = value;
+    private VatRate(decimal value)
+    {
+        Value = value;
+    }
 
     public decimal Value { get; }
 
-    public static VatRate Parse(string raw) =>
-        decimal.TryParse(raw, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var value) && value >= 0
+    public static VatRate Parse(string raw)
+    {
+        return decimal.TryParse(raw, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var value) && value >= 0
             ? new VatRate(value)
             : throw new FormatException($"'{raw}' is not a valid VAT rate.");
+    }
 }

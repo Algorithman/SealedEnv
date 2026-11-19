@@ -1,11 +1,22 @@
+// ---------------------------------------------------------------------------------------
+// Solution: SealedEnv
+// Project: SealedEnv
+// Filename: SealedEnvException.cs
+// 
+// Last modified: 2026-11-19 14:25
+// Created:       2026-11-19 11:11
+// 
+// Copyright: 2026 Algorithman
+// ---------------------------------------------------------------------------------------
+
 using System.Text;
 
 namespace SealedEnv;
 
 /// <summary>
-/// Thrown by generated <c>Load()</c> members when any binding failed.
-/// Aggregates <em>all</em> errors of one load — never fails fast — so a single
-/// startup reports every bad variable at once.
+///     Thrown by generated <c>Load()</c> members when any binding failed.
+///     Aggregates <em>all</em> errors of one load — never fails fast — so a single
+///     startup reports every bad variable at once.
 /// </summary>
 public sealed class SealedEnvException : Exception
 {
