@@ -5,6 +5,11 @@
   <ItemGroup>
     <!-- Generator: pin the Roslyn floor (newer SDKs load older-Roslyn generators fine; the reverse is not true). -->
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.11.0" />
+    <!-- Benchmarks (Phase 6): Configuration binder reflection path + DotNetEnv comparison.
+         Pinned to the 10.x band to match the repo's net10.0 / SDK-10 pin. -->
+    <PackageVersion Include="DotNetEnv" Version="3.2.0" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.12" />
     <!-- Tests (runtime behavior + generator snapshots) -->
     <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
