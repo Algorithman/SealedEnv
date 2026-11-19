@@ -517,7 +517,12 @@ internal static class SealedEnvModel
             case MemberKind.TimeSpan:
                 return TimeSpan.TryParse(defaultValue, CultureInfo.InvariantCulture, out _);
             case MemberKind.Uri:
-                return Uri.TryCreate(defaultValue, UriKind.Absolute, out _);
+                // Mirrors the runtime rule (SealedEnvLoader.HasExplicitUriScheme) — keep in
+                // sync: on Unix, Uri.TryCreate(UriKind.Absolute) also accepts POSIX paths
+                // ("/relative" becomes file:///relative), making the bare check
+                // platform-dependent. Require an RFC 3986 scheme in the text itself.
+                return HasExplicitUriScheme(defaultValue) &&
+                       Uri.TryCreate(defaultValue, UriKind.Absolute, out _);
             case MemberKind.Guid:
                 return Guid.TryParse(defaultValue, out _);
             case MemberKind.Enum:
@@ -525,6 +530,34 @@ internal static class SealedEnvModel
             default:
                 return true; // string-ish/collection/custom: nothing to reject at compile time
         }
+    }
+
+    /// <summary>
+    ///     Copy of the runtime <c>SealedEnvLoader.HasExplicitUriScheme</c> rule (the
+    ///     generator cannot reference the runtime assembly) — keep the two in sync.
+    /// </summary>
+    private static bool HasExplicitUriScheme(string raw)
+    {
+        if (raw.Length == 0 || !((raw[0] >= 'a' && raw[0] <= 'z') || (raw[0] >= 'A' && raw[0] <= 'Z')))
+        {
+            return false;
+        }
+
+        foreach (var ch in raw)
+        {
+            if (ch == ':')
+            {
+                return true;
+            }
+
+            var letterOrDigit = (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9');
+            if (!letterOrDigit && ch != '+' && ch != '-' && ch != '.')
+            {
+                return false;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>

@@ -289,13 +289,44 @@ public static class SealedEnvLoader
             return null;
         }
 
-        if (System.Uri.TryCreate(raw, UriKind.Absolute, out var value))
+        if (HasExplicitUriScheme(raw) && System.Uri.TryCreate(raw, UriKind.Absolute, out var value))
         {
             return value;
         }
 
         RecordInvalid(ref errors, key, displayName, "Uri", raw, "absolute URI");
         return null;
+    }
+
+    /// <summary>
+    ///     Platform-invariant absoluteness check: on Unix, <see cref="System.Uri.TryCreate" />
+    ///     with <see cref="UriKind.Absolute" /> also maps POSIX absolute paths ("/abs/path")
+    ///     onto file:// URIs, which Windows rejects — a bare absolute check would accept
+    ///     different strings per operating system. Require an RFC 3986 scheme in the text
+    ///     itself ("ALPHA *( ALPHA / DIGIT / "+" / "-" / "." )":) before consulting the BCL.
+    ///     Mirrored by the generator's SVE0004 default check (SealedEnvModel) — keep in sync.
+    /// </summary>
+    private static bool HasExplicitUriScheme(string raw)
+    {
+        if (raw.Length == 0 || !char.IsAsciiLetter(raw[0]))
+        {
+            return false;
+        }
+
+        foreach (var ch in raw.AsSpan(1))
+        {
+            if (ch == ':')
+            {
+                return true;
+            }
+
+            if (!char.IsAsciiLetterOrDigit(ch) && ch is not '+' or '-' or '.')
+            {
+                return false;
+            }
+        }
+
+        return false;
     }
 
     public static Guid Guid(
