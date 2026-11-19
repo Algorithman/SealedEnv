@@ -16,8 +16,8 @@ using Microsoft.CodeAnalysis;
 namespace SealedEnv.Generators;
 
 /// <summary>
-///     Compile-time diagnostics (SVE prefix). Severities and codes follow the plan §3.
-///     SVE0002/SVE0003/SVE0007 are live from Phase 2; the rest land in Phase 3.
+///     Compile-time diagnostics (SVE prefix). Severities and codes follow the plan §3;
+///     SVE0001–SVE0008 and SVE0100 are all live as of Phase 4.
 /// </summary>
 internal static class SveDiagnostics
 {
@@ -63,7 +63,7 @@ internal static class SveDiagnostics
 
     public static readonly DiagnosticDescriptor UnsupportedCarrierShape = new DiagnosticDescriptor("SVE0100", "Carrier shape not yet supported",
         "{0} — no Load/TryLoad members are generated for this type", Category, DiagnosticSeverity.Warning, true,
-        "Temporary diagnostic for shapes the skeleton does not support yet (nested or generic carriers); formal codes land in Phase 4.");
+        "Covers nested, generic and ref-struct carriers; a top-level sealed non-generic record/class/record-struct carrier always generates.");
 
     public static readonly ImmutableDictionary<string, DiagnosticDescriptor> ById =
         new Dictionary<string, DiagnosticDescriptor>
@@ -85,11 +85,6 @@ internal static class SveDiagnostics
     ///     deterministic and the diagnostic explains it.
     /// </summary>
     public static readonly string[] BlockingIds = ["SVE0002", "SVE0004", "SVE0006", "SVE0007", "SVE0008",];
-
-#pragma warning disable RS2008 // release tracking per descriptor — not worth plumbing in v0.1
-
-
-#pragma warning restore RS2008
 }
 
 /// <summary>
