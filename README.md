@@ -123,6 +123,7 @@ Unsupported parameter types fail compilation with `SVE0002` — never silently.
 | `SVE0007` | Primary-constructor parameter without `[EnvKey]` |
 | `SVE0008` | Carrier already declares `Load`/`TryLoad`/`SealedEnvBind` |
 | `SVE0009` | `[SealedEnv]` prefix has leading or trailing whitespace |
+| `SVE0010` | Carrier has no primary constructor |
 | `SVE0100` | Nested / generic / ref-struct carrier (not supported yet, warning) |
 
 Blocking diagnostics suppress generation; `SVE0003` still generates

@@ -412,11 +412,26 @@ public static class SealedEnvLoader
 
         try
         {
-            return T.Parse(raw, CultureInfo.InvariantCulture);
+            var value = T.Parse(raw, CultureInfo.InvariantCulture);
+            if (value is null)
+            {
+                // IParsable<T> is user-implementable and may answer null for a
+                // present value — that is a broken parser, not a successful load.
+                Record(
+                    ref errors, key, EnvErrorCode.Invalid, typeName,
+                    $"Environment variable '{key}' has value \"{raw}\" but the {typeName} parser returned null for {displayName}.");
+                return default!;
+            }
+
+            return value;
         }
-        catch (Exception exception) when (exception is FormatException or OverflowException or ArgumentException)
+        catch (Exception exception)
         {
-            RecordInvalid(ref errors, key, displayName, typeName, raw, $"{typeName} value");
+            // Parse is user code and may throw anything; every failure is an
+            // ordinary Invalid error so TryLoad survives hostile parsers too.
+            RecordInvalid(
+                ref errors, key, displayName, typeName, raw,
+                $"{typeName} value (parser threw {exception.GetType().Name}: {exception.Message})");
             return default!;
         }
     }
@@ -441,11 +456,26 @@ public static class SealedEnvLoader
 
         try
         {
-            return parse(raw);
+            var value = parse(raw);
+            if (value is null)
+            {
+                // A parser that answers null for a present value would otherwise
+                // smuggle a null member into a "successful" load.
+                Record(
+                    ref errors, key, EnvErrorCode.Invalid, typeName,
+                    $"Environment variable '{key}' has value \"{raw}\" but the {typeName} parser returned null for {displayName}.");
+                return default!;
+            }
+
+            return value;
         }
-        catch (Exception exception) when (exception is FormatException or OverflowException or ArgumentException)
+        catch (Exception exception)
         {
-            RecordInvalid(ref errors, key, displayName, typeName, raw, $"{typeName} value");
+            // Parsers are user code and may throw anything; every failure is an
+            // ordinary Invalid error so TryLoad survives hostile parsers too.
+            RecordInvalid(
+                ref errors, key, displayName, typeName, raw,
+                $"{typeName} value (parser threw {exception.GetType().Name}: {exception.Message})");
             return default!;
         }
     }

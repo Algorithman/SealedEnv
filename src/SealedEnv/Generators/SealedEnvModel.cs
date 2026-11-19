@@ -220,23 +220,47 @@ internal static class SealedEnvModel
         }
 
         var members = ImmutableArray.CreateBuilder<EnvMemberModel>();
-        if (ParameterList(context.TargetNode) is { } parameterList)
-        {
-            foreach (var parameterSyntax in parameterList.Parameters)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                if (context.SemanticModel.GetDeclaredSymbol(parameterSyntax, cancellationToken) is not IParameterSymbol parameter)
-                {
-                    continue;
-                }
+        var syntaxParameters = ParameterList(context.TargetNode)?.Parameters;
+        var primaryParameters = syntaxParameters?
+            .Select(parameterSyntax => context.SemanticModel.GetDeclaredSymbol(parameterSyntax, cancellationToken))
+            .OfType<IParameterSymbol>()
+            .ToImmutableArray();
 
-                ExtractMember(
-                    parameter,
-                    effectivePrefix,
-                    emptyAsUnset,
-                    members,
-                    diagnostics);
-            }
+        if (syntaxParameters is null)
+        {
+            // The attributed part has no parameter list: either the carrier has no
+            // primary constructor at all (SVE0010), or this is a partial record whose
+            // primary constructor lives on another part. The type symbol sees the
+            // whole declaration across parts — ask it. Implicitly-declared ctors are
+            // excluded: the record copy constructor (one parameter of the carrier's
+            // own type!) must not be mistaken for the primary. If several explicit
+            // parameterized ctors exist (a hand-written chaining ctor), the
+            // parameter count wins; records have exactly one primary.
+            primaryParameters = typeSymbol.InstanceConstructors
+                .Where(static ctor => !ctor.IsImplicitlyDeclared && ctor.Parameters.Length > 0)
+                .OrderByDescending(static ctor => ctor.Parameters.Length)
+                .FirstOrDefault()
+                ?.Parameters;
+        }
+
+        if (primaryParameters is null)
+        {
+            diagnostics.Add(new DiagnosticInfo(
+                "SVE0010",
+                [typeSymbol.Name,],
+                attributeLocation));
+            return NotGeneratable(typeSymbol, emptyAsUnset, diagnostics, attributeLocation);
+        }
+
+        foreach (var parameter in primaryParameters)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            ExtractMember(
+                parameter,
+                effectivePrefix,
+                emptyAsUnset,
+                members,
+                diagnostics);
         }
 
         DetectDuplicateKeys(members, diagnostics, attributeLocation);
@@ -465,7 +489,12 @@ internal static class SealedEnvModel
         };
     }
 
-    /// <summary>SVE0003: two members resolving to the same key silently share one value.</summary>
+    /// <summary>
+    ///     SVE0003: two members resolving to the same key silently share one value.
+    ///     The second pass catches case variants ("port" vs "PORT"): they are distinct
+    ///     keys ordinally, but on case-insensitive platforms (Windows) they read the
+    ///     SAME variable — a platform-dependent trap worth naming at compile time.
+    /// </summary>
     private static void DetectDuplicateKeys(
         ImmutableArray<EnvMemberModel>.Builder members,
         ImmutableArray<DiagnosticInfo>.Builder diagnostics,
@@ -479,6 +508,20 @@ internal static class SealedEnvModel
             diagnostics.Add(new DiagnosticInfo(
                 "SVE0003",
                 [names, group.Key,],
+                location));
+        }
+
+        foreach (var group in members
+                     .GroupBy(static m => m.Key, StringComparer.OrdinalIgnoreCase)
+                     .Where(static g => g.Count() > 1)
+                     .Where(static g => g.Select(static m => m.Key)
+                         .Distinct(StringComparer.Ordinal)
+                         .Count() == g.Count()))
+        {
+            var names = string.Join(" and ", group.Select(static m => $"'{m.ParameterName}'"));
+            diagnostics.Add(new DiagnosticInfo(
+                "SVE0003",
+                [names, $"{group.Key} (identical modulo case)",],
                 location));
         }
     }

@@ -67,6 +67,12 @@ internal static class SveDiagnostics
         DiagnosticSeverity.Error, true,
         "Write the prefix without leading or trailing whitespace (e.g. \"MYAPP_\"), or omit it / pass an empty string to read global keys.");
 
+    public static readonly DiagnosticDescriptor NoPrimaryConstructor = new DiagnosticDescriptor("SVE0010",
+        "Carrier has no primary constructor",
+        "Type '{0}' is a [SealedEnv] carrier but has no primary constructor; there are no parameters to bind environment variables to", Category,
+        DiagnosticSeverity.Error, true,
+        "Give the carrier a primary constructor whose parameters carry [EnvKey], e.g. sealed partial record AppConfig([EnvKey] int Port). For partial declarations the primary constructor may live on any part — [SealedEnv] finds it through the type symbol.");
+
     public static readonly DiagnosticDescriptor UnsupportedCarrierShape = new DiagnosticDescriptor("SVE0100", "Carrier shape not yet supported",
         "{0} — no Load/TryLoad members are generated for this type", Category, DiagnosticSeverity.Warning, true,
         "Covers nested, generic and ref-struct carriers; a top-level sealed non-generic record/class/record-struct carrier always generates.");
@@ -83,6 +89,7 @@ internal static class SveDiagnostics
             [MissingEnvKeyAttribute.Id] = MissingEnvKeyAttribute,
             [MemberNameConflict.Id] = MemberNameConflict,
             [WhitespacePrefix.Id] = WhitespacePrefix,
+            [NoPrimaryConstructor.Id] = NoPrimaryConstructor,
             [UnsupportedCarrierShape.Id] = UnsupportedCarrierShape,
         }.ToImmutableDictionary();
 
@@ -91,7 +98,7 @@ internal static class SveDiagnostics
     ///     (no half-working Load()). SVE0003 duplicates still generate: behavior stays
     ///     deterministic and the diagnostic explains it.
     /// </summary>
-    public static readonly string[] BlockingIds = ["SVE0002", "SVE0004", "SVE0006", "SVE0007", "SVE0008", "SVE0009",];
+    public static readonly string[] BlockingIds = ["SVE0002", "SVE0004", "SVE0006", "SVE0007", "SVE0008", "SVE0009", "SVE0010",];
 }
 
 /// <summary>

@@ -141,4 +141,81 @@ public class AdversarialShapeTests
         Assert.Contains("\"MY APP_PORT\"", generated);
     }
 
+    [Fact]
+    public void A_carrier_without_a_primary_constructor_is_SVE0010_and_blocks_generation()
+    {
+        // A body-only record has no parameters to bind — the old behavior generated
+        // a useless Load() constructing the carrier with zero members.
+        const string source = """
+                               using SealedEnv;
+
+                               namespace TestCode;
+
+                               [SealedEnv(Prefix = "MYAPP_")]
+                               public sealed partial record AppConfig;
+                               """;
+
+        var (diagnostics, generated) = GeneratorRunner.Run(source);
+
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Equal("SVE0010", diagnostic.Id);
+        Assert.Equal(DiagnosticSeverity.Error, diagnostic.Severity);
+        Assert.Null(generated);
+    }
+
+    [Fact]
+    public void Attribute_on_a_partial_part_without_the_parameter_list_still_binds()
+    {
+        // The primary constructor lives on the OTHER partial part. The generator
+        // must find it through the type symbol instead of only the attributed
+        // declaration's syntax — silently binding nothing would be the failure.
+        const string source = """
+                              using SealedEnv;
+
+                              namespace TestCode;
+
+                              [SealedEnv(Prefix = "P_")]
+                              public sealed partial record AppConfig
+                              {
+                                  public bool Used { get; init; }
+                              }
+
+                              public sealed partial record AppConfig([EnvKey] int Port);
+                              """;
+
+        var (diagnostics, generated) = GeneratorRunner.Run(source);
+
+        Assert.Empty(diagnostics);
+        Assert.NotNull(generated);
+        Assert.Contains("\"P_PORT\"", generated);
+        Assert.Contains("new AppConfig(", generated);
+    }
+
+    [Fact]
+    public void Case_variant_duplicate_keys_are_SVE0003_with_a_modulo_case_note()
+    {
+        // Ordinally distinct, but on case-insensitive platforms (Windows) both
+        // members read the SAME variable — a platform-dependent trap.
+        const string source = """
+                              using SealedEnv;
+
+                              namespace TestCode;
+
+                              [SealedEnv(Prefix = "MYAPP_")]
+                              public sealed partial record AppConfig(
+                                  [EnvKey("port")] int Port,
+                                  [EnvKey("PORT")] int AltPort);
+                              """;
+
+        var (diagnostics, generated) = GeneratorRunner.Run(source);
+
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Equal("SVE0003", diagnostic.Id);
+        Assert.Contains("modulo case", diagnostic.GetMessage());
+        // Non-blocking: generation continues, each member reads its own exact key.
+        Assert.NotNull(generated);
+        Assert.Contains("\"MYAPP_port\"", generated);
+        Assert.Contains("\"MYAPP_PORT\"", generated);
+    }
+
 }

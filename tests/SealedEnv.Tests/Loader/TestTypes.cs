@@ -58,3 +58,46 @@ public readonly record struct Port(int Value) : IParsable<Port>
         return false;
     }
 }
+
+/// <summary>Exotic underlying types for the <see cref="SealedEnvLoader.Enum{T}" /> route.</summary>
+public enum TinyLevel : byte
+{
+    Low = 1,
+    High = 200,
+}
+
+public enum WideLevel : long
+{
+    Deep = 1L << 40,
+}
+
+[Flags]
+public enum Perms : ulong
+{
+    Read = 1,
+    Write = 2,
+    Execute = 4,
+}
+
+/// <summary>
+///     Reference-type <see cref="IParsable{T}" /> whose Parse deliberately returns
+///     null — attacking the loader's contract: a null from a present value must be
+///     an Invalid error, never a smuggled null member.
+/// </summary>
+public sealed class NullParsable : IParsable<NullParsable>
+{
+    private NullParsable()
+    {
+    }
+
+    static NullParsable IParsable<NullParsable>.Parse(string s, IFormatProvider? provider) => null!;
+
+    static bool IParsable<NullParsable>.TryParse(
+        [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] string? s,
+        IFormatProvider? provider,
+        out NullParsable result)
+    {
+        result = null!;
+        return false;
+    }
+}

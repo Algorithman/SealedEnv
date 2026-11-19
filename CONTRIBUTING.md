@@ -128,6 +128,7 @@ cached.
 | SVE0007 | Primary-constructor parameter without `[EnvKey]` | yes |
 | SVE0008 | Carrier already declares `Load`/`TryLoad`/`SealedEnvBind` | yes |
 | SVE0009 | `[SealedEnv]` prefix has leading or trailing whitespace | yes |
+| SVE0010 | Carrier has no primary constructor (found via the type symbol — partial placement on any part works) | yes |
 | SVE0100 | Nested / generic / ref-struct carrier — not supported yet | yes (warning) |
 
 ## Releasing
