@@ -122,7 +122,7 @@ Unsupported parameter types fail compilation with `SVE0002` — never silently.
 | `SVE0006` | `Parser` lacks `public static T Parse(string)` |
 | `SVE0007` | Primary-constructor parameter without `[EnvKey]` |
 | `SVE0008` | Carrier already declares `Load`/`TryLoad`/`SealedEnvBind` |
-| `SVE0009` | `[SealedEnv]` prefix is whitespace only |
+| `SVE0009` | `[SealedEnv]` prefix has leading or trailing whitespace |
 | `SVE0100` | Nested / generic / ref-struct carrier (not supported yet, warning) |
 
 Blocking diagnostics suppress generation; `SVE0003` still generates

@@ -162,11 +162,13 @@ internal static class SealedEnvModel
         var effectivePrefix = prefix is { Length: > 0, } nonEmptyPrefix ? nonEmptyPrefix : string.Empty;
         var attributeLocation = AttributeLocation(attributeData);
 
-        // SVE0009: a whitespace-only prefix silently produces keys no environment can
-        // match (" " yields " PORT"). Empty string stays legal — it is the documented
-        // way to read global keys. (The Length guard matters: "".All(...) is
-        // vacuously true and would block the legal empty prefix.)
-        if (prefix is { Length: > 0, } && prefix.All(char.IsWhiteSpace))
+        // SVE0009: whitespace around the prefix silently produces keys no environment
+        // can match — " myapp_" is an invisible editor typo, never intent (it would
+        // yield " MYAPP_PORT"). Internal whitespace stays legal (visible, plausibly
+        // deliberate); empty string stays legal — it is the documented way to read
+        // global keys. (The Length guard matters: "".Trim() == "" is true and would
+        // block the legal empty prefix.)
+        if (prefix is { Length: > 0, } && prefix != prefix.Trim())
         {
             diagnostics.Add(new DiagnosticInfo(
                 "SVE0009",

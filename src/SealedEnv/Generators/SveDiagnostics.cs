@@ -62,8 +62,8 @@ internal static class SveDiagnostics
         DiagnosticSeverity.Error, true);
 
     public static readonly DiagnosticDescriptor WhitespacePrefix = new DiagnosticDescriptor("SVE0009",
-        "[SealedEnv] prefix is whitespace only",
-        "Prefix '{0}' on type '{1}' consists only of whitespace; the derived keys would never match an environment variable", Category,
+        "[SealedEnv] prefix has leading or trailing whitespace",
+        "Prefix '{0}' on type '{1}' starts or ends with whitespace; the derived keys would never match an environment variable", Category,
         DiagnosticSeverity.Error, true,
         "Write the prefix without leading or trailing whitespace (e.g. \"MYAPP_\"), or omit it / pass an empty string to read global keys.");
 

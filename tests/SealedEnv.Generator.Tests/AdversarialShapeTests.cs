@@ -79,7 +79,9 @@ public class AdversarialShapeTests
     [InlineData("\\t")]
     [InlineData("\\n")]
     [InlineData("\\r\\t ")]
-    public void A_whitespace_only_prefix_is_SVE0009_and_blocks_generation(string prefixSourceText)
+    [InlineData(" myprefix")]      // invisible leading typo
+    [InlineData("myprefix ")]      // invisible trailing typo
+    public void A_prefix_with_edge_whitespace_is_SVE0009_and_blocks_generation(string prefixSourceText)
     {
         var source = $$"""
                        using SealedEnv;
@@ -117,4 +119,26 @@ public class AdversarialShapeTests
         Assert.NotNull(generated);
         Assert.Contains("\"PORT\"", generated); // key without any prefix
     }
+    [Fact]
+    public void Internal_whitespace_in_the_prefix_stays_legal()
+    {
+        // SVE0009 draws the line at INVISIBLE whitespace (leading/trailing). An
+        // internal space is visible and plausibly deliberate for a legacy system:
+        // the generator stays out of the way.
+        const string source = """
+                               using SealedEnv;
+
+                               namespace TestCode;
+
+                               [SealedEnv(Prefix = "MY APP_")]
+                               public sealed partial record AppConfig([EnvKey] int Port);
+                               """;
+
+        var (diagnostics, generated) = GeneratorRunner.Run(source);
+
+        Assert.Empty(diagnostics);
+        Assert.NotNull(generated);
+        Assert.Contains("\"MY APP_PORT\"", generated);
+    }
+
 }

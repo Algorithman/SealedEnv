@@ -38,8 +38,8 @@ variable configuration for .NET.
   Configuration binder on the benchmark carrier.
 - Adversarial hardening: `Uri` parsing is platform-invariant (explicit scheme
   required — Unix would otherwise accept `/path` as `file:///path`), and
-  whitespace-only prefixes are rejected at compile time (`SVE0009`) instead of
-  silently producing unmatchable keys.
+  prefixes with leading or trailing whitespace are rejected at compile time
+  (`SVE0009`) instead of silently producing unmatchable keys.
 - Strong-named runtime and generator assemblies (public key token
   `0bea3f265278acb1`, key committed with the repo per analyzer-package
   convention).
