@@ -253,4 +253,30 @@ public class GeneratedLoadTests
         var fallback = PlainStructSettings.Load(new DictionaryEnvProvider(new Dictionary<string, string?>()));
         Assert.Equal("debug", fallback.Mode);
     }
+
+    [Fact]
+    public void Documentation_export_renders_every_member_with_escaped_pipes()
+    {
+        var docs = DocumentedConfig.ConfigurationDocumentation;
+
+        Assert.Contains("| Key | Type | Required | Default | Description |", docs);
+        Assert.Contains("| `DOCS_PORT` | `int` | No | `8080` | TCP port to listen on |", docs);
+        Assert.Contains("| `DOCS_DBCONNECTION` | `string` | Yes | — |", docs);
+        Assert.Contains("| `DOCS_HOSTS` | `string[]` | No | — | Comma separated hosts |", docs);
+        Assert.Contains("| `DOCS_MAGIC\\|KEY` | `int` | No | — | Pipes get escaped |", docs);
+        Assert.DoesNotContain("MAGIC|KEY", docs); // raw pipes must not survive unescaped
+
+        // The extra member must not disturb the binding itself — the pipe key binds
+        // exactly, despite its markdown escaping.
+        var config = DocumentedConfig.Load(new DictionaryEnvProvider(new Dictionary<string, string?>
+        {
+            ["DOCS_DBCONNECTION"] = "Host=db",
+            ["DOCS_HOSTS"] = "a.internal, b.internal",
+            ["DOCS_MAGIC|KEY"] = "42",
+        }));
+        Assert.Equal(8080, config.Port);
+        Assert.Equal("Host=db", config.DbConnection);
+        Assert.Equal(new[] { "a.internal", "b.internal", }, config.Hosts);
+        Assert.Equal(42, config.Magic);
+    }
 }

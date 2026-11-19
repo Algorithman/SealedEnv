@@ -29,6 +29,7 @@ public class AttributeSurfaceTests
 
         Assert.Null(attribute.Prefix);
         Assert.True(attribute.EmptyAsUnset); // the PORT="" footgun is closed by default
+        Assert.False(attribute.GenerateDocumentation); // doc export is opt-in
     }
 
     [Fact]

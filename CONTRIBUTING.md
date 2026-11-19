@@ -79,6 +79,7 @@ SealedEnvEmitter.Emit  ── thin code only ───────────�
 │   partial type adds Load() / TryLoad() / private SealedEnvBind(provider, out errors)
 │   per member: one SealedEnvLoader.<Kind>(...) call; all parsing/validation
 │   lives in the runtime lib so generator changes rarely move snapshots
+│   GenerateDocumentation → public const string ConfigurationDocumentation
 ▼
 AddSource(HintName)  ── emitted into the consumer's compilation
 ```

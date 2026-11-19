@@ -45,6 +45,7 @@ internal sealed record EnvMemberModel(
     bool AllowEmpty,
     char Separator,
     string? ParserText, // fully qualified type owning the static Parse for Custom
+    string? Description, // [EnvKey(Description = ...)] — surfaced by the doc export
     bool PassWithNullForgiving) // append ! at the constructor argument
 {
     public string VariableName => "__" + ParameterName;
@@ -70,7 +71,8 @@ internal sealed class EnvTargetModel
         bool skipGeneration, // a blocking diagnostic says why; only diagnostics are reported
         ImmutableArray<EnvMemberModel> members,
         ImmutableArray<DiagnosticInfo> diagnostics,
-        Location diagnosticLocation)
+        Location diagnosticLocation,
+        bool generateDocumentation = false)
     {
         Namespace = @namespace;
         TypeName = typeName;
@@ -81,6 +83,7 @@ internal sealed class EnvTargetModel
         Members = members;
         Diagnostics = diagnostics;
         DiagnosticLocation = diagnosticLocation;
+        GenerateDocumentation = generateDocumentation;
     }
 
     public string? Namespace { get; }
@@ -92,6 +95,7 @@ internal sealed class EnvTargetModel
     public ImmutableArray<EnvMemberModel> Members { get; }
     public ImmutableArray<DiagnosticInfo> Diagnostics { get; }
     public Location DiagnosticLocation { get; }
+    public bool GenerateDocumentation { get; }
 
     public bool Equals(EnvTargetModel? other)
     {
@@ -102,6 +106,7 @@ internal sealed class EnvTargetModel
                IsValueType == other.IsValueType &&
                EmptyAsUnset == other.EmptyAsUnset &&
                SkipGeneration == other.SkipGeneration &&
+               GenerateDocumentation == other.GenerateDocumentation &&
                Members.SequenceEqual(other.Members) &&
                Diagnostics.SequenceEqual(other.Diagnostics);
     }
@@ -121,6 +126,7 @@ internal sealed class EnvTargetModel
             hash = (hash * 397) ^ IsValueType.GetHashCode();
             hash = (hash * 397) ^ EmptyAsUnset.GetHashCode();
             hash = (hash * 397) ^ SkipGeneration.GetHashCode();
+            hash = (hash * 397) ^ GenerateDocumentation.GetHashCode();
             return hash;
         }
     }
@@ -145,6 +151,7 @@ internal static class SealedEnvModel
 
         string? prefix = null;
         var emptyAsUnset = true;
+        var generateDocumentation = false;
         foreach (var named in attributeData.NamedArguments)
         {
             switch (named.Key)
@@ -154,6 +161,9 @@ internal static class SealedEnvModel
                     break;
                 case "EmptyAsUnset":
                     emptyAsUnset = (bool)named.Value.Value!;
+                    break;
+                case "GenerateDocumentation":
+                    generateDocumentation = (bool)named.Value.Value!;
                     break;
             }
         }
@@ -201,7 +211,11 @@ internal static class SealedEnvModel
 
         // SVE0008: the generated partial adds these members to the user's type —
         // a same-name declaration in the user's part would be a CS0111 duplicate.
-        foreach (var generatedName in GeneratedMemberNames)
+        // The documentation member joins the list only when docs are enabled.
+        var generatedMemberNames = generateDocumentation
+            ? GeneratedMemberNames.Append("ConfigurationDocumentation").ToArray()
+            : GeneratedMemberNames;
+        foreach (var generatedName in generatedMemberNames)
         {
             if (typeSymbol.GetMembers(generatedName).Length > 0)
             {
@@ -275,7 +289,8 @@ internal static class SealedEnvModel
             blocking,
             members.ToImmutable(),
             diagnostics.ToImmutable(),
-            attributeLocation);
+            attributeLocation,
+            generateDocumentation);
     }
 
     private static EnvTargetModel NotGeneratable(
@@ -397,6 +412,7 @@ internal static class SealedEnvModel
         string? defaultValue = null;
         var allowEmpty = false;
         var separator = ',';
+        string? description = null;
         INamedTypeSymbol? parser = null;
         foreach (var named in attribute.NamedArguments)
         {
@@ -413,6 +429,9 @@ internal static class SealedEnvModel
                     break;
                 case "Separator":
                     separator = (char)named.Value.Value!;
+                    break;
+                case "Description":
+                    description = (string?)named.Value.Value;
                     break;
                 case "Parser":
                     parser = named.Value.Value as INamedTypeSymbol;
@@ -472,6 +491,7 @@ internal static class SealedEnvModel
             allowEmpty,
             separator,
             parser?.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+            description,
             PassWithNullForgiving(parameter.Type, kind.Value)));
     }
 

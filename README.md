@@ -220,6 +220,29 @@ environment-variable startup config, SealedEnv differs where it matters:
    the benchmark carrier — the binder path builds a configuration tree and
    reflection-binds a POCO on every load.
 
+## Doc export
+
+Opt a carrier into documentation with `GenerateDocumentation = true`:
+
+```csharp
+[SealedEnv(Prefix = "MYAPP_", GenerateDocumentation = true)]
+public sealed partial record AppConfig(
+    [EnvKey("PORT", Default = "8080", Description = "TCP port")] int Port,
+    [EnvKey(Required = true, Description = "Connection string")] string DbConnection);
+
+Console.WriteLine(AppConfig.ConfigurationDocumentation);
+// | Key | Type | Required | Default | Description |
+// |-----|------|----------|---------|-------------|
+// | `MYAPP_PORT` | `int` | No | `8080` | TCP port |
+// | `MYAPP_DBCONNECTION` | `string` | Yes | — | Connection string |
+```
+
+The table is a plain markdown string — render it at runtime (`--help-config`
+style) or dump it to a file in your docs pipeline. Pipes and other
+markdown-hostile characters in keys and descriptions are escaped; declaring a
+member named `ConfigurationDocumentation` alongside the flag is a compile-time
+error (`SVE0008`).
+
 ## Testing your config without touching the environment
 
 `Load`/`TryLoad` accept any `IEnvProvider`. In tests, supply a `DictionaryEnvProvider`

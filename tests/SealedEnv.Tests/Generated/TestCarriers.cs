@@ -64,6 +64,18 @@ internal partial struct PlainStructSettings([EnvKey(Default = "debug")] string M
     public string Mode { get; } = Mode;
 }
 
+/// <summary>
+///     Doc-export carrier: GenerateDocumentation emits the markdown table as a
+///     generated <c>.docs.g.md</c> file plus the ConfigurationDocumentation member.
+///     Covers the Description column, defaults, requiredness and pipe escaping.
+/// </summary>
+[SealedEnv(Prefix = "DOCS_", GenerateDocumentation = true)]
+internal sealed partial record DocumentedConfig(
+    [EnvKey("PORT", Default = "8080", Description = "TCP port to listen on")] int Port,
+    [EnvKey(Required = true)] string DbConnection,
+    [EnvKey("HOSTS", Description = "Comma separated hosts")] string[] Hosts,
+    [EnvKey("MAGIC|KEY", Description = "Pipes get escaped")] int Magic);
+
 // Plain primary-constructor class: the class body must capture the parameter into a
 // property itself — records do this implicitly, classes do not.
 [SealedEnv(Prefix = "S_")]

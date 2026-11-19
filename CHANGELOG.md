@@ -30,6 +30,10 @@ variable configuration for .NET.
 - Compile-time diagnostics SVE0001–SVE0010 and SVE0100: unsupported types,
   malformed defaults, duplicate keys, non-sealed carriers, invalid parser
   shapes, missing `[EnvKey]`, member name conflicts, unsupported carrier shapes.
+- Doc export: `[SealedEnv(GenerateDocumentation = true)]` emits a
+  `ConfigurationDocumentation` markdown table (Key / Type / Required / Default /
+  Description from `[EnvKey(Description = ...)]`) on the carrier — render
+  configuration help at runtime or dump it for docs pipelines.
 - SCREAMING_SNAKE_CASE key derivation with acronym-boundary underscores
   (`DbConnection` → `DBCONNECTION`, `APIKey` → `API_KEY`).
 - NativeAOT-compatible and trim-clean (CI publishes and runs the sample on

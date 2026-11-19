@@ -30,4 +30,12 @@ public sealed class SealedEnvAttribute : Attribute
     ///     classic <c>PORT=""</c> footgun). <see langword="true" /> by default.
     /// </summary>
     public bool EmptyAsUnset { get; set; } = true;
+
+    /// <summary>
+    ///     Emits a <c>ConfigurationDocumentation</c> string member on the carrier:
+    ///     a markdown table (Key / Type / Required / Default / Description, from
+    ///     <see cref="EnvKeyAttribute.Description" />) for runtime help rendering or
+    ///     dumping to a docs file. <see langword="false" /> by default.
+    /// </summary>
+    public bool GenerateDocumentation { get; set; }
 }

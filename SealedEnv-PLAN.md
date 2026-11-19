@@ -294,7 +294,7 @@ Manual csproj edits after scaffold: generator project → `netstandard2.0`; runt
 
 ## 6. v0.2 ideas (do NOT build now — park them)
 
-- `dotnet` doc export: emit a markdown table of every config key/type/default from the generator
+- `dotnet` doc export — DONE EARLY (pulled into 0.9.0.3): `[SealedEnv(GenerateDocumentation = true)]` emits a `ConfigurationDocumentation` markdown member. AddSource can only produce C# files (a raw `.md` hint name gets compiled as C# and breaks the build), so the table ships as a string for pipelines to dump.
 - Partial-property API (`[EnvKey] public partial int Port { get; }` — C# 13)
 - `Reloadable<T>` wrapper polling env changes
 - dotenv file provider (`SealedEnv.DotEnv` satellite package)

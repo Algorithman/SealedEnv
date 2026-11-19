@@ -59,6 +59,10 @@ public sealed class SealedEnvGenerator : IIncrementalGenerator
                     SourceText.From(
                         SealedEnvEmitter.Emit(target, GeneratorVersion),
                         Encoding.UTF8));
+
+                // Documentation is emitted as the ConfigurationDocumentation member
+                // (inside the .cs above): AddSource can only produce C# files — a
+                // raw .md hint name gets compiled as C# and breaks the build.
             }
         });
 
