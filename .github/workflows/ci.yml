@@ -32,3 +32,40 @@ jobs:
         run: dotnet build
       - name: Test
         run: dotnet test --no-build
+
+  aot-publish:
+    # Phase 5 gate (SealedEnv-PLAN.md §3): the sample must NativeAOT-publish AND run.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            rid: linux-x64
+            exe: SampleConsoleApp
+          - os: windows-latest
+            rid: win-x64
+            exe: SampleConsoleApp.exe
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Install native toolchain (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y clang zlib1g-dev
+      - name: Publish NativeAOT
+        # PublishAot is declared in the sample csproj: passing it as a global
+        # -p:PublishAot=true would flow into the referenced netstandard2.0
+        # generator project and fail with NETSDK1207.
+        run: dotnet publish samples/SampleConsoleApp -c Release -r ${{ matrix.rid }} --self-contained
+      - name: Run the native binary
+        shell: bash
+        run: |
+          set -e
+          exe="samples/SampleConsoleApp/bin/Release/net10.0/${{ matrix.rid }}/publish/${{ matrix.exe }}"
+          SAMPLE_PORT=9091 SAMPLE_DBCONNECTION="Host=db" SAMPLE_HOSTS="a,b" "$exe" | grep "Loaded SampleConfig"
+          if SAMPLE_DBCONNECTION="" "$exe"; then
+            echo "::error::AOT binary succeeded despite an unset required variable"
+            exit 1
+          fi

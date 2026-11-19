@@ -4,6 +4,11 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
     <IsPackable>false</IsPackable>
+    <!-- The AOT gate (SealedEnv-PLAN.md §3 Phase 5): publishing this app is a
+         NativeAOT build. Declared here rather than as a global -p:PublishAot=true,
+         because global properties flow into the referenced generator project
+         (netstandard2.0) and fail it with NETSDK1207. -->
+    <PublishAot>true</PublishAot>
   </PropertyGroup>
 
   <!-- The crucial wiring: reference the runtime lib normally and attach the

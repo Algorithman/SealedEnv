@@ -217,12 +217,12 @@ Runtime lib: `net10.0` (fall back to `net8.0` if your SDK is older); C# 13+ for 
 **Exit criteria:** no known syntax shape crashes or silently mis-generates. ✅
 
 ### Phase 5 — Ecosystem fitness (1 evening)
-- [ ] AOT gate: `dotnet publish samples/SampleConsoleApp -r linux-x64 --self-contained -p:PublishAot=true` — must succeed and run (add to CI)
-- [ ] Trimming-clean: `IsAotCompatible`/`IsTrimmable` warnings visible, zero
-- [ ] Keyed services test: same record loads from `DictionaryEnvProvider` in-memory — the "testability" story must be demonstrable in the README
-- [ ] Optional: `[EnvKey]` on properties of a class (non-ctor) — only if cheap; else document as not-yet-supported (partial properties are a clean v0.2 story)
+- [x] AOT gate: sample publishes NativeAOT **and runs** (happy path + aggregated-failure report with exit code 1) — command adjusted: `PublishAot` is declared *in the sample csproj*, not as a global `-p:PublishAot=true`, because global properties flow into the referenced netstandard2.0 generator project and fail with NETSDK1207. CI job `aot-publish` does linux-x64 (ubuntu) + win-x64 (windows), runs the binary both ways. Local machine needed: VS `vswhere` dir on PATH for the MSVC link step
+- [x] Trimming-clean: publish passes under `TreatWarningsAsErrors` with zero IL2026/IL3050-class warnings; runtime lib carries `IsAotCompatible=true` since Phase 0. Local SDK was 10.0.201, whose AOT toolchain (ILCompiler 10.0.5) trips NU1903 (Brotli OOB write CVE, patched in the 10.0.4xx band) — bumped side-by-side to 10.0.404 in `D:\Users\Chris\.dotnet-local` and pinned via `global.json` (`rollForward: latestFeature`), which also blocks CI from resolving the vulnerable band
+- [x] Keyed services test: `GeneratedLoadTests.The_same_carrier_loads_from_any_provider_the_caller_supplies` — identical carrier, two in-memory providers, process env untouched; the README shows the same pattern
+- [x] Optional: `[EnvKey]` on properties of a class (non-ctor) — documented as not-yet-supported in README ("Not yet supported"); partial properties are the clean v0.2 story
 
-**Exit criteria:** AOT publish green in CI; README shows the in-memory test example.
+**Exit criteria:** AOT publish green in CI; README shows the in-memory test example. ✅ (CI job added; win-x64 verified locally end-to-end)
 
 ### Phase 6 — Benchmarks & docs (1 evening)
 - [ ] BenchmarkDotNet, four scenarios on a 6-field record: raw `Environment.GetEnvironmentVariable` + manual parse (floor), SealedEnv `Load()`, `Microsoft.Extensions.Configuration` binder (reflection path), `DotNetEnv`

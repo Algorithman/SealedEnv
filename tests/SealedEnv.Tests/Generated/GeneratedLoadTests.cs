@@ -201,4 +201,21 @@ public class GeneratedLoadTests
             CultureInfo.CurrentCulture = originalCulture;
         }
     }
+
+    [Fact]
+    public void The_same_carrier_loads_from_any_provider_the_caller_supplies()
+    {
+        // The provider IS the test seam: the identical generated Load works against
+        // any IEnvProvider — here two different in-memory environments, with the
+        // process environment never touched.
+        var production = DefaultsConfig.Load(new DictionaryEnvProvider(
+            new Dictionary<string, string?> { ["E2E_DBCONNECTION"] = "Host=prod.internal", }));
+
+        var local = DefaultsConfig.Load(new DictionaryEnvProvider(
+            new Dictionary<string, string?> { ["E2E_DBCONNECTION"] = "Host=localhost", }));
+
+        Assert.Equal("Host=prod.internal", production.DbConnection);
+        Assert.Equal("Host=localhost", local.DbConnection);
+        Assert.Equal(8080, production.Port); // defaults apply identically in both loads
+    }
 }
