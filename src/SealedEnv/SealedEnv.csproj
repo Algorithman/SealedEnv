@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <!-- CI catches trim/AOT warnings early (SealedEnv-PLAN.md §2). -->
+    <IsAotCompatible>true</IsAotCompatible>
+    <Description>Source-generated, AOT-friendly, strongly-typed environment variable configuration for .NET.</Description>
+    <PackageTags>environment-variables;config;source-generator;aot;nativeaot;settings</PackageTags>
+    <!-- The generator is a nested project; keep its sources/artifacts out of this library's globs. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);Generators/**</DefaultItemExcludes>
+  </PropertyGroup>
+
+  <!-- Vogen-style single package: the generator assembly is packed as an
+       analyzer asset of this project's nupkg (analyzers/dotnet/cs). -->
+  <ItemGroup>
+    <ProjectReference Include="Generators\SealedEnvGenerator.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+</Project>

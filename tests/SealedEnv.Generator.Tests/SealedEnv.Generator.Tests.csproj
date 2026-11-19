@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+    <PackageReference Include="Verify.Xunit" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <!-- Normal (non-analyzer) reference: these tests drive the generator in-memory
+       via CSharpGeneratorDriver for snapshot/diagnostic testing. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\SealedEnv\Generators\SealedEnvGenerator.csproj" />
+    <ProjectReference Include="..\..\src\SealedEnv\SealedEnv.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>
