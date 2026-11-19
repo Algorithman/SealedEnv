@@ -6,12 +6,26 @@
     <RootNamespace>SealedEnv.Generators</RootNamespace>
     <IsRoslynComponent>true</IsRoslynComponent>
     <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
-    <!-- RS2008 (analyzer release tracking) applies from the first shipped release on; nothing has shipped yet. Wire ShippedAnalyzerApis.txt/RemovedAnalyzerApis.txt up when packaging v0.1.0-alpha (Phase 7). -->
-    <NoWarn>$(NoWarn);RS2008</NoWarn>
+    <!-- RS2008 (analyzer release tracking) is wired via AnalyzerReleases.Shipped.md /
+         AnalyzerReleases.Unshipped.md (AdditionalFiles below); no NoWarn needed. -->
+
   </PropertyGroup>
+
+  <!-- Strong-named friend access for the generator unit tests. The MSBuild item
+       (not a hand-written attribute) is deliberate: netstandard2.0's
+       InternalsVisibleToAttribute surface has no PublicKey property (CS0246),
+       while the SDK's attribute emission accepts the keyed identity.
+       Regenerating SealedEnv.snk requires updating this key too. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="SealedEnv.Generator.Tests" PublicKey="002400000480000014010000060200000024000052534131000800000100010099db6d8e3b6a65fba7bd2935db0a604609aa232b6fe3032759c1f41a112f43597f37414e626593da3207b9f07df2d76d4e02db996a052d60ae86d40fbda18988aa94ab8d72d3c7389cd0aa3b4b4856903ca2ddd35cacf1398a8be92ddc6f4218f39f6f1868043ba4636c4fc5e8052976e59f2732a53b09191d478865725f5c2de2142179e19e23373438d821e1ce6f8be4dbcd540202048c2785f4b1ca587f3e44023e71979eea97d40fb3937709f5bd6744a261e1f3fac620a3fe899a340c16a1996a734b4d2a732c50760cbad7788b14d23aeb0d7680cb2babaf192cb8746ecdd9c38d478a1dec65b9698abdb60fd31e8731941d85aedd5c8ee10e8ee5fcab"/>
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all"/>
+    <!-- RS2008 release tracking (SealedEnv-PLAN.md §3 Phase 7): rules ship with
+         v0.9.0.3; move the Unshipped table into Shipped on release. -->
+    <AdditionalFiles Include="AnalyzerReleases.Shipped.md"/>
+    <AdditionalFiles Include="AnalyzerReleases.Unshipped.md"/>
   </ItemGroup>
 
 </Project>

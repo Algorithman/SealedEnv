@@ -4,18 +4,51 @@
     <TargetFramework>net10.0</TargetFramework>
     <!-- CI catches trim/AOT warnings early (SealedEnv-PLAN.md §2). -->
     <IsAotCompatible>true</IsAotCompatible>
+    <!-- Packaging (SealedEnv-PLAN.md §3 Phase 7): deterministic + SourceLink +
+         snupkg symbols, rendered README, MIT expression. Version comes from
+         VersionPrefix in Directory.Build.props. -->
     <Description>Source-generated, AOT-friendly, strongly-typed environment variable configuration for .NET.</Description>
     <PackageTags>environment-variables;config;source-generator;aot;nativeaot;settings</PackageTags>
+    <Authors>Algorithman</Authors>
+    <PackageProjectUrl>https://github.com/Algorithman/SealedEnv</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Algorithman/SealedEnv.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <!-- The generator is a nested project; keep its sources/artifacts out of this library's globs. -->
     <DefaultItemExcludes>$(DefaultItemExcludes);Generators/**</DefaultItemExcludes>
   </PropertyGroup>
 
   <!-- Vogen-style single package: the generator assembly is packed as an
-       analyzer asset of this project's nupkg (analyzers/dotnet/cs). -->
+       analyzer asset of this project's nupkg (analyzers/dotnet/cs). ProjectReference
+       Pack="true" does not carry analyzer outputs, so the built dll/pdb are packed
+       directly (build order is guaranteed by the ProjectReference below). -->
+  <ItemGroup>
+    <None Include="Generators\bin\$(Configuration)\netstandard2.0\SealedEnvGenerator.dll"
+          Visible="false"
+          Pack="true"
+          PackagePath="analyzers/dotnet/cs"/>
+    <None Include="Generators\bin\$(Configuration)\netstandard2.0\SealedEnvGenerator.pdb"
+          Visible="false"
+          Pack="true"
+          PackagePath="analyzers/dotnet/cs"/>
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="Generators\SealedEnvGenerator.csproj"
                       OutputItemType="Analyzer"
                       ReferenceOutputAssembly="false"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- SourceLink is built into the .NET SDK since 9 (git source-control
+         integration); no Microsoft.SourceLink.GitHub package reference needed.
+         EmbedUntrackedSources/PublishRepositoryUrl above finish the setup. -->
+    <None Include="..\..\README.md" Pack="true" PackagePath="\"/>
   </ItemGroup>
 
 </Project>

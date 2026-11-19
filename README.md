@@ -19,10 +19,12 @@ var cfg = AppConfig.Load();   // throws SealedEnvException aggregating ALL error
 listing every bad variable at once, and a testable provider seam.
 
 > 🚧 Work in progress — the build plan lives in [SealedEnv-PLAN.md](SealedEnv-PLAN.md).
-> Current status: **Phase 6 (benchmarks & docs)** — NativeAOT publish of the sample app
-> is green and runs on linux-x64 (CI) and win-x64, trimming analyzers are warning-free,
-> and the benchmark suite + docs are in place. Remaining: package and release
-> (Phase 7).
+> Current status: **Phase 7 (release)** — packaging, CHANGELOG and the tag-driven
+> release job are wired (`git tag vX.Y.Z` → pack → NuGet push → GitHub release;
+> needs the `NUGET_API_KEY` secret). The packed nupkg is verified end-to-end:
+> installed into a scratch console app via `dotnet add package`, generates and
+> runs correctly. Changes since the last tag: see the
+> [CHANGELOG](CHANGELOG.md).
 
 ## Quickstart
 
@@ -259,6 +261,12 @@ dotnet publish samples/SampleConsoleApp -c Release -r win-x64 --self-contained
 # Benchmark scenario cross-check (fast), or a full BenchmarkDotNet run.
 dotnet run --project benchmarks/SealedEnv.Benchmarks -- --verify
 dotnet run -c Release --project benchmarks/SealedEnv.Benchmarks -- --filter "*"
+
+# Release: bump VersionPrefix in Directory.Build.props, move the
+# AnalyzerReleases.Unshipped.md table into Shipped, then tag — CI packs,
+# pushes to NuGet (NUGET_API_KEY secret) and creates the GitHub release.
+grep VersionPrefix Directory.Build.props
+git tag vX.Y.Z && git push origin vX.Y.Z
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the generator pipeline, test layout

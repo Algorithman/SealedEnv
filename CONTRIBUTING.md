@@ -129,6 +129,35 @@ cached.
 | SVE0008 | Carrier already declares `Load`/`TryLoad`/`SealedEnvBind` | yes |
 | SVE0100 | Nested / generic / ref-struct carrier — not supported yet | yes (warning) |
 
+## Releasing
+
+1. Bump `<VersionPrefix>` in `Directory.Build.props` (the only version source —
+   it flows into the assembly, the nupkg and the generated
+   `GeneratedCodeAttribute`).
+2. Move the `AnalyzerReleases.Unshipped.md` rule table into
+   `AnalyzerReleases.Shipped.md` under a `## Release X.Y` header (plain
+   version — the RS2007 header parser rejects prerelease suffixes; the
+   Unshipped file itself carries **no** release header while work is in
+   progress).
+3. Update CHANGELOG.md.
+4. `git tag vX.Y.Z && git push origin vX.Y.Z` — the tag must match
+   `VersionPrefix` exactly (the CI `release` job hard-fails otherwise). CI
+   packs with `ContinuousIntegrationBuild`, pushes to nuget.org
+   (`NUGET_API_KEY` secret) and creates the GitHub release with the nupkg +
+   snupkg attached.
+
+Packaging decisions to remember: SourceLink comes from the SDK's built-in git
+integration (the `Microsoft.SourceLink.GitHub` 8.0.0 package conflicts with
+SDK 10 targets — MSB4057); the generator dll + pdb are packed as
+`analyzers/dotnet/cs` assets via `None` items because `Pack="true"` on a
+`ProjectReference` carries no analyzer output. Every assembly strong-names
+against the committed root `SealedEnv.snk` (identity, not secrecy — the
+established OSS practice for analyzer packages; signing is deterministic and
+needs no CI secret). netstandard2.0's `InternalsVisibleToAttribute` surface
+has no `PublicKey` property (CS0246), so the generator's friend access to the
+test assembly is declared as an MSBuild `InternalsVisibleTo` item with the
+full public key in its csproj — regenerating the snk means updating that key.
+
 ## AOT note
 
 `PublishAot` lives in the **sample csproj**, not in CI as a global

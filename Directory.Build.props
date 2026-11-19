@@ -8,6 +8,14 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <Deterministic>true</Deterministic>
     <VersionPrefix>0.9.0.3</VersionPrefix>
+    <!-- Strong naming (identity, not security): the snk is committed deliberately
+         (established OSS practice for analyzer/generator packages — e.g. so
+         strongly-named consumer assemblies can reference the runtime lib).
+         Signing is deterministic and needs no CI secret. Regenerating SealedEnv.snk
+         breaks InternalsVisibleTo in Generators/InternalsVisibleTo.cs, which pins
+         this key's full public blob. -->
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>$(MSBuildThisFileDirectory)SealedEnv.snk</AssemblyOriginatorKeyFile>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
   </PropertyGroup>
 
