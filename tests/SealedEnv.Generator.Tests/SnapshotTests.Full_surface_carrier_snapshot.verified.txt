@@ -7,7 +7,7 @@ namespace TestCode;
 
 internal readonly partial record struct FullSurface
 {
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("SealedEnvGenerator", "0.9.0.4")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("SealedEnvGenerator", "1.0.0.0")]
     public static FullSurface Load(global::SealedEnv.IEnvProvider? provider = null)
     {
         var bound = SealedEnvBind(provider ?? global::SealedEnv.EnvironmentEnvProvider.Instance, out var __errors);
@@ -19,7 +19,7 @@ internal readonly partial record struct FullSurface
         return bound.Value;
     }
 
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("SealedEnvGenerator", "0.9.0.4")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("SealedEnvGenerator", "1.0.0.0")]
     public static bool TryLoad(out FullSurface config, out global::System.Collections.Generic.IReadOnlyList<global::SealedEnv.EnvError> errors, global::SealedEnv.IEnvProvider? provider = null)
     {
         var bound = SealedEnvBind(provider ?? global::SealedEnv.EnvironmentEnvProvider.Instance, out var __errors);
@@ -28,7 +28,7 @@ internal readonly partial record struct FullSurface
         return bound is not null;
     }
 
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("SealedEnvGenerator", "0.9.0.4")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("SealedEnvGenerator", "1.0.0.0")]
     private static FullSurface? SealedEnvBind(global::SealedEnv.IEnvProvider provider, out global::System.Collections.Generic.List<global::SealedEnv.EnvError> __errors)
     {
         __errors = new global::System.Collections.Generic.List<global::SealedEnv.EnvError>();

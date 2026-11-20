@@ -4,7 +4,7 @@ All notable changes to SealedEnv are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com); versions follow the
 `VersionPrefix` in `Directory.Build.props`.
 
-## 0.9.0.4 - 2026-11-20
+## 1.0.0 - 2026-11-20
 
 ### Added
 
