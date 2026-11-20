@@ -1,7 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <!-- net7 is the floor: IParsable<T> (the AOT-safe parse route) shipped in 7.
+         Building older/newer TFMs relies on targeting packs: the SDK that
+         global.json selects plus the ref packs shared in the dotnet root (or
+         auto-restored Microsoft.NETCore.App.Ref packages). -->
+    <TargetFrameworks>net7.0;net8.0;net9.0;net10.0;net11.0</TargetFrameworks>
     <!-- CI catches trim/AOT warnings early (SealedEnv-PLAN.md §2). -->
     <IsAotCompatible>true</IsAotCompatible>
     <!-- Packaging (SealedEnv-PLAN.md §3 Phase 7): deterministic + SourceLink +

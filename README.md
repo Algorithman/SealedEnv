@@ -18,6 +18,11 @@ var cfg = AppConfig.Load();   // throws SealedEnvException aggregating ALL error
 **Why:** no reflection (NativeAOT-safe), compile-time validation, structured errors
 listing every bad variable at once, and a testable provider seam.
 
+Supports .NET 7.0–11.0 (net7 is the floor because the AOT-safe `IParsable<T>`
+parse route shipped there); the runtime library is multi-targeted and its
+semantics matrix re-proven on every maintained runtime. Carrier declarations
+are plain C# except partial-property carriers, which need C# 13.
+
 > 🚧 Work in progress — the build plan lives in [SealedEnv-PLAN.md](SealedEnv-PLAN.md).
 > Current status: **Phase 7 (release)** — packaging, CHANGELOG and the tag-driven
 > release job are wired (`git tag vX.Y.Z` → pack → NuGet push via trusted

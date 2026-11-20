@@ -5,8 +5,12 @@ change SealedEnv without re-deriving its design from the source.
 
 ## Setup
 
-- .NET SDK **10.0.404** pinned by `global.json` (`rollForward: latestFeature` —
-  any newer 10.0.4xx feature band works because of a vulnerability in 10.0.2xx).
+- .NET SDK **11.0.100** pinned by `global.json` (`rollForward: latestFeature` —
+  any newer 11.0.1xx feature band works). It builds every TFM the repo targets;
+  net7–net10 targeting packs come from the local dotnet root or auto-restore
+  from NuGet. (Historical note: the pin was 10.0.404 before multi-targeting —
+  chosen to escape a vulnerable 10.0.2xx AOT toolchain, and kept there until
+  net11.0 targeting forced the move.)
 - No other tooling. Tests, generator snapshots and the AOT gate are plain
   `dotnet` commands.
 

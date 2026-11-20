@@ -279,7 +279,9 @@ dotnet add benchmarks/SealedEnv.Benchmarks package BenchmarkDotNet
 ```
 
 Manual csproj edits after scaffold: generator project → `netstandard2.0`; runtime project →
-`IsAotCompatible=true`; both → root `Directory.Build.props` values apply automatically.
+`IsAotCompatible=true` and multi-targeted `net7.0`–`net11.0` (net7 floor = `IParsable<T>`;
+the runtime test suite runs net8–net11, net7's test host has no runner asset and is EOL);
+both → root `Directory.Build.props` values apply automatically.
 
 ## 5. Test fixtures to create early (they ARE the spec)
 

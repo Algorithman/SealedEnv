@@ -8,6 +8,15 @@ All notable changes to SealedEnv are documented here. The format follows
 
 ### Added
 
+- Multi-targeting: the runtime library ships for `net7.0`, `net8.0`, `net9.0`,
+  `net10.0` and `net11.0` (net7 is the floor — the AOT-safe `IParsable<T>` parse
+  route shipped there). The runtime test suite now runs on every maintained
+  runtime (net8–net11; net7 is EOL and its test host has no runner asset) so
+  BCL parsing drift cannot land silently; the generator keeps its
+  `netstandard2.0` target and loads in every Roslyn host.
+- The build SDK pin moved to 11.0.100 (net11.0 targeting is rejected by SDK 10
+  with NETSDK1045); CI installs 11.0.x everywhere plus 8–10 in the test job for
+  their runtimes.
 - **Partial-property carriers (C# 13)**: a `[SealedEnv]` carrier may now bind
   `[EnvKey]` get-only partial properties instead of primary-constructor
   parameters — `[EnvKey] public partial int Port { get; }`. The generator emits

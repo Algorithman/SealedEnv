@@ -1,7 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <!-- Runtime behavior is re-proven on every MAINTAINED runtime (net7's test
+         host has no xunit.runner.visualstudio asset and net7 is EOL); the
+         net7.0 library target itself is still build-verified against its ref
+         pack. The generator-test project stays single-TFM: generator behavior
+         is TFM-independent. -->
+    <TargetFrameworks>net8.0;net9.0;net10.0;net11.0</TargetFrameworks>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
