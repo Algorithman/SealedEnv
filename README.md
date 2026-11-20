@@ -20,8 +20,12 @@ listing every bad variable at once, and a testable provider seam.
 
 Supports .NET 7.0–11.0 (net7 is the floor because the AOT-safe `IParsable<T>`
 parse route shipped there); the runtime library is multi-targeted and its
-semantics matrix re-proven on every maintained runtime. Carrier declarations
-are plain C# except partial-property carriers, which need C# 13.
+semantics matrix re-proven on every maintained runtime. Consumer language
+floors, pinned by compiling at the exact version: **parameter-mode carriers
+need C# 10** (records, and the emitted file uses a file-scoped namespace;
+`record struct` carriers are C# 10 too), **partial-property carriers need
+C# 13**. Below a floor you get compiler errors in your carrier and the
+generated file — never silently-broken output.
 
 > 🚧 Work in progress — the build plan lives in [SealedEnv-PLAN.md](SealedEnv-PLAN.md).
 > Current status: **Phase 7 (release)** — packaging, CHANGELOG and the tag-driven
@@ -308,6 +312,27 @@ public void AppConfig_loads_from_the_test_environment()
 
 The same carrier type works unchanged against any provider — production code calls
 `AppConfig.Load()` (real environment), tests inject a dictionary.
+
+## .env files (satellite package)
+
+[`SealedEnv.DotEnv`](https://www.nuget.org/packages/SealedEnv.DotEnv) adds a
+dotenv file provider — no generator surface, just another `IEnvProvider`:
+
+```csharp
+using SealedEnv.DotEnv;
+
+// The conventional layering: real environment variables win, the file fills the gaps.
+var config = AppConfig.Load(new ChainedEnvProvider(
+    new EnvironmentEnvProvider(),
+    new DotEnvFileEnvProvider(".env")));
+```
+
+The parser is line-based and fail-fast (a malformed line throws
+`DotEnvFileFormatException` with the 1-based line number — a typo in a
+developer-authored file should be loud, not skipped). `#` comments, `export `
+prefixes, quoted values with `\n`/`\t` escapes, last-wins duplicates; see the
+package README for the exact contract. Swap the chain to prefer the file, and
+keys stay case-sensitive ordinal so tests behave identically on every OS.
 
 ## Not yet supported
 

@@ -8,6 +8,17 @@ All notable changes to SealedEnv are documented here. The format follows
 
 ### Added
 
+- **New satellite package `SealedEnv.DotEnv`**: an `IEnvProvider` over `.env`
+  files (`DotEnvFileEnvProvider`) plus `ChainedEnvProvider` for the conventional
+  env-overrides-file layering. Line-based fail-fast parser: `#` comments
+  (full-line and inline on unquoted values), `export ` prefixes, quoted values
+  (double-quoted process `\n`/`\r`/`\t`/`\\`/`\"` escapes and keep `#`
+  literally; single-quoted fully literal), `KEY=` as an explicit empty value,
+  last-wins duplicates, ordinal case-sensitive keys; malformed lines throw
+  `DotEnvFileFormatException` with the 1-based line number. Ships for
+  net7.0–net11.0 with a `SealedEnv` package dependency; pure runtime, no
+  generator surface.
+
 - **Parsed-element collections**: list members now bind beyond `string[]` — `T[]` and
   `IReadOnlyList<T>` for every element kind the scalar surface supports (`int[]`, `Guid[]`,
   `LogLevel[]`, `DateOnly[]` via `IParsable<T>`, …), each entry parsed by the element's exact
@@ -26,6 +37,13 @@ All notable changes to SealedEnv are documented here. The format follows
 - The build SDK pin moved to 11.0.100 (net11.0 targeting is rejected by SDK 10
   with NETSDK1045); CI installs 11.0.x everywhere plus 8–10 in the test job for
   their runtimes.
+- Consumer language floors are pinned by end-to-end compile tests at the exact
+  LangVersion: parameter-mode carriers at C# 10 (records + the emitted
+  file-scoped namespace; `record struct` carriers are C# 10 too), partial-
+  property carriers at C# 13. Below a floor the consumer sees compiler errors in
+  their carrier and the generated file (CS8773/CS8703) — never silently-broken
+  output; a consumer simulation harness (`RunCompiled`) re-parses emitted code
+  at the pinned version like a real project would.
 - **Partial-property carriers (C# 13)**: a `[SealedEnv]` carrier may now bind
   `[EnvKey]` get-only partial properties instead of primary-constructor
   parameters — `[EnvKey] public partial int Port { get; }`. The generator emits

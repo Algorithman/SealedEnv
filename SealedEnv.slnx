@@ -7,12 +7,14 @@
     </Folder>
     <Folder Name="/src/">
         <Project Path="src/SealedEnv/SealedEnv.csproj"/>
+        <Project Path="src/SealedEnv.DotEnv/SealedEnv.DotEnv.csproj"/>
     </Folder>
     <Folder Name="/src/SealedEnv/"/>
     <Folder Name="/src/SealedEnv/Generators/">
         <Project Path="src/SealedEnv/Generators/SealedEnvGenerator.csproj"/>
     </Folder>
     <Folder Name="/tests/">
+        <Project Path="tests/SealedEnv.DotEnv.Tests/SealedEnv.DotEnv.Tests.csproj"/>
         <Project Path="tests/SealedEnv.Generator.Tests/SealedEnv.Generator.Tests.csproj"/>
         <Project Path="tests/SealedEnv.Tests/SealedEnv.Tests.csproj"/>
     </Folder>
