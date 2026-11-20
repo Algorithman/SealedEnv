@@ -7,7 +7,7 @@ namespace TestCode;
 
 public sealed partial record AppConfig
 {
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("SealedEnvGenerator", "1.0.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("SealedEnvGenerator", "1.0.2.0")]
     public static AppConfig Load(global::SealedEnv.IEnvProvider? provider = null)
     {
         var bound = SealedEnvBind(provider ?? global::SealedEnv.EnvironmentEnvProvider.Instance, out var __errors);
@@ -19,7 +19,7 @@ public sealed partial record AppConfig
         return bound;
     }
 
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("SealedEnvGenerator", "1.0.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("SealedEnvGenerator", "1.0.2.0")]
     public static bool TryLoad(out AppConfig? config, out global::System.Collections.Generic.IReadOnlyList<global::SealedEnv.EnvError> errors, global::SealedEnv.IEnvProvider? provider = null)
     {
         var bound = SealedEnvBind(provider ?? global::SealedEnv.EnvironmentEnvProvider.Instance, out var __errors);
@@ -28,7 +28,7 @@ public sealed partial record AppConfig
         return bound is not null;
     }
 
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("SealedEnvGenerator", "1.0.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("SealedEnvGenerator", "1.0.2.0")]
     private static AppConfig? SealedEnvBind(global::SealedEnv.IEnvProvider provider, out global::System.Collections.Generic.List<global::SealedEnv.EnvError> __errors)
     {
         __errors = new global::System.Collections.Generic.List<global::SealedEnv.EnvError>();
