@@ -11,13 +11,19 @@
 
 using System.Collections.Immutable;
 using System.Globalization;
+using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace SealedEnv.Generators;
 
-/// <summary>Which <see cref="SealedEnvLoader" /> helper a member's generated call targets.</summary>
+/// <summary>
+///     Which <see cref="SealedEnvLoader" /> helper a member's generated call targets.
+///     List members (<see cref="EnvMemberModel.IsArray" />) target the same kind with
+///     an "Array" suffix on the helper name — String → StringArray, Enum → EnumArray,
+///     Parsable → ParsableArray, Custom → CustomArray.
+/// </summary>
 internal enum MemberKind
 {
     Int,
@@ -32,7 +38,6 @@ internal enum MemberKind
     Enum,
     Parsable,
     Custom,
-    StringArray,
 }
 
 internal sealed record EnvMemberModel(
@@ -40,6 +45,7 @@ internal sealed record EnvMemberModel(
     string TypeText, // fully qualified with global:: prefixes, keyword-safe
     string Key, // resolved env key, prefix already applied
     MemberKind Kind,
+    bool IsArray, // splitting list route (T[] / IReadOnlyList<T>): helper name gains "Array" + separator arg
     bool Required,
     string? Default,
     bool AllowEmpty,
@@ -48,7 +54,8 @@ internal sealed record EnvMemberModel(
     string? Description, // [EnvKey(Description = ...)] — surfaced by the doc export
     bool PassWithNullForgiving, // append ! at the constructor argument
     string AnnotatedTypeText = "", // includes ? on annotated reference types; property-mode fields/accessors/ctor params
-    string AccessibilityText = "") // declared accessibility of an [EnvKey] partial property, verbatim
+    string AccessibilityText = "", // declared accessibility of an [EnvKey] partial property, verbatim
+    string ElementTypeText = "") // fully qualified ELEMENT type of a list member (generic arg of *Array<T> helpers)
 {
     public string VariableName => "__" + ParameterName;
 
@@ -718,8 +725,8 @@ internal static class SealedEnvModel
             explicitKey = key;
         }
 
-        var kind = Route(memberType, parser);
-        if (kind is null)
+        var routed = Route(memberType, parser);
+        if (routed is null)
         {
             diagnostics.Add(new DiagnosticInfo(
                 "SVE0002",
@@ -728,11 +735,17 @@ internal static class SealedEnvModel
             return;
         }
 
+        var (kind, isArray) = routed.Value;
+        TryGetListElement(memberType, out var listElement);
+
         var attributeLocation = AttributeLocation(attribute);
 
         // SVE0006: the parser is emitted as a method group, so it must be callable
-        // exactly — catching this here beats a confusing error inside generated code.
-        if (parser is not null && !ParserHasValidParseMethod(parser, memberType))
+        // exactly — either the member's own type (whole-value parse, arrays included)
+        // or, for a splitting list, the element type (per-entry parse). Catching this
+        // here beats a confusing error inside generated code.
+        if (parser is not null &&
+            !ParserHasValidParseMethod(parser, isArray && listElement is not null ? listElement : memberType))
         {
             diagnostics.Add(new DiagnosticInfo(
                 "SVE0006",
@@ -743,7 +756,8 @@ internal static class SealedEnvModel
 
         // SVE0004: a malformed Default would make every load fail forever; the same
         // rules the runtime loader applies are checked at compile time.
-        if (defaultValue is not null && !DefaultParsesAs(kind.Value, defaultValue, memberType))
+        if (defaultValue is not null &&
+            !DefaultParsesAs(kind, defaultValue, memberType, isArray, listElement, separator))
         {
             diagnostics.Add(new DiagnosticInfo(
                 "SVE0004",
@@ -758,16 +772,20 @@ internal static class SealedEnvModel
             memberName,
             memberType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
             resolvedKey,
-            kind.Value,
+            kind,
+            isArray,
             required,
             defaultValue,
             allowEmpty,
             separator,
             parser?.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
             description,
-            PassWithNullForgiving(memberType, kind.Value),
+            !isArray && PassWithNullForgiving(memberType, kind), // list helpers return T[], never null
             annotatedTypeText,
-            accessibilityText));
+            accessibilityText,
+            isArray && listElement is not null
+                ? listElement.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)
+                : string.Empty));
     }
 
     /// <summary>
@@ -847,11 +865,31 @@ internal static class SealedEnvModel
 
     /// <summary>
     ///     SVE0004: mirrors the runtime parse rules per type (invariant culture). Types
-    ///     without a compile-time-checkable parser (string, string[], IParsable&lt;T&gt;,
-    ///     custom Parser) accept anything here and are validated at runtime.
+    ///     without a compile-time-checkable parser (string, IParsable&lt;T&gt;, custom
+    ///     Parser — scalars or lists) accept anything here and are validated at runtime.
+    ///     For list members the default is split with the same escape-aware splitter the
+    ///     runtime uses and every entry is validated against the element's scalar rule.
     /// </summary>
-    private static bool DefaultParsesAs(MemberKind kind, string defaultValue, ITypeSymbol parameterType)
+    private static bool DefaultParsesAs(
+        MemberKind kind,
+        string defaultValue,
+        ITypeSymbol memberType,
+        bool isArray,
+        ITypeSymbol? listElement,
+        char separator)
     {
+        if (isArray)
+        {
+            if (kind is MemberKind.String or MemberKind.Parsable or MemberKind.Custom)
+            {
+                return true; // strings accept any text; parser-backed entries are runtime-only
+            }
+
+            var entries = SplitDefaultEntries(defaultValue, separator);
+            return entries.All(entry => DefaultParsesAs(kind, entry, listElement ?? memberType, false, null, separator));
+        }
+
+        var parameterType = listElement ?? memberType;
         switch (kind)
         {
             case MemberKind.Int:
@@ -883,6 +921,40 @@ internal static class SealedEnvModel
             default:
                 return true; // string-ish/collection/custom: nothing to reject at compile time
         }
+    }
+
+    /// <summary>
+    ///     Copy of the runtime <c>SealedEnvLoader.SplitEntries</c> (the generator
+    ///     cannot reference the runtime assembly) — keep the two in sync: backslash
+    ///     escapes a following separator, entries whitespace-trimmed, empty entries
+    ///     preserved. Used to validate list defaults entry-wise (SVE0004).
+    /// </summary>
+    private static string[] SplitDefaultEntries(string raw, char separator)
+    {
+        var entries = new List<string>();
+        var current = new StringBuilder();
+
+        for (var i = 0; i < raw.Length; i++)
+        {
+            var c = raw[i];
+            if (c == '\\' && i + 1 < raw.Length && raw[i + 1] == separator)
+            {
+                current.Append(separator);
+                i++;
+            }
+            else if (c == separator)
+            {
+                entries.Add(current.ToString().Trim());
+                current.Clear();
+            }
+            else
+            {
+                current.Append(c);
+            }
+        }
+
+        entries.Add(current.ToString().Trim());
+        return [.. entries,];
     }
 
     /// <summary>
@@ -946,19 +1018,88 @@ internal static class SealedEnvModel
         return true;
     }
 
+    /// <summary>Loader kind plus whether the member is a splitting list route.</summary>
+    private readonly record struct RoutedMember(MemberKind Kind, bool IsArray);
+
     /// <summary>
-    ///     Picks the loader helper for a parameter type. Unsupported shapes return null
-    ///     (reported as SVE0002): no Nullable&lt;T&gt; values, no parsed-element arrays,
-    ///     no collections other than string[], and no shadowing risk (System types are
-    ///     matched by namespace + name, not by name alone).
+    ///     Picks the loader helper for a member type. Unsupported shapes return null
+    ///     (reported as SVE0002): no Nullable&lt;T&gt; values, no collections other than
+    ///     T[] / IReadOnlyList&lt;T&gt;, no nested lists, and no shadowing risk (System
+    ///     types are matched by namespace + name, not by name alone).
     /// </summary>
-    private static MemberKind? Route(ITypeSymbol type, INamedTypeSymbol? parser)
+    private static RoutedMember? Route(ITypeSymbol type, INamedTypeSymbol? parser)
     {
         if (parser is not null)
         {
-            return MemberKind.Custom;
+            // Per-entry parser: the member is a list and Parse returns the ELEMENT
+            // type ([EnvKey(Parser = typeof(VatRate))] VatRate[] Vats). Everything
+            // else is the whole-value shape — Parse returning the member type
+            // (int[] included, the pre-arrays custom shape) — no split.
+            if (TryGetListElement(type, out var element) && ParserHasValidParseMethod(parser, element))
+            {
+                return new RoutedMember(MemberKind.Custom, IsArray: true);
+            }
+
+            return new RoutedMember(MemberKind.Custom, IsArray: false);
         }
 
+        // Lists route by ELEMENT through the same scalar table: int[] is Int entries,
+        // IReadOnlyList<Guid> is Guid entries, string[] / IReadOnlyList<string> stay
+        // string entries (annotation ignored — split entries are never null).
+        if (TryGetListElement(type, out var listElement))
+        {
+            if (TryGetListElement(listElement, out _))
+            {
+                return null; // nested lists (int[][], IReadOnlyList<IReadOnlyList<T>>) have no flat split
+            }
+
+            if (listElement.SpecialType == SpecialType.System_String)
+            {
+                return new RoutedMember(MemberKind.String, IsArray: true);
+            }
+
+            var elementKind = RouteScalar(listElement);
+            return elementKind is null ? null : new RoutedMember(elementKind.Value, IsArray: true);
+        }
+
+        var scalar = RouteScalar(type);
+        return scalar is null ? null : new RoutedMember(scalar.Value, IsArray: false);
+    }
+
+    /// <summary>
+    ///     The two supported list shapes: single-dimensional arrays and
+    ///     IReadOnlyList&lt;T&gt; (matched by namespace + arity, never by name alone).
+    ///     jagged/multidimensional arrays stay arrays here — nesting is rejected by
+    ///     the caller.
+    /// </summary>
+    private static bool TryGetListElement(ITypeSymbol type, out ITypeSymbol element)
+    {
+        if (type is IArrayTypeSymbol { Rank: 1, } array)
+        {
+            element = array.ElementType;
+            return true;
+        }
+
+        if (type is INamedTypeSymbol named &&
+            named.Arity == 1 &&
+            named.OriginalDefinition is { MetadataName: "IReadOnlyList`1", } definition &&
+            definition.ContainingNamespace is { IsGlobalNamespace: false, } containing &&
+            containing.ToDisplayString() == "System.Collections.Generic")
+        {
+            element = named.TypeArguments[0];
+            return true;
+        }
+
+        element = null!;
+        return false;
+    }
+
+    /// <summary>
+    ///     Scalar routing: the BCL primitives plus System types, enums and
+    ///     IParsable&lt;T&gt;-of-self. Nullable&lt;T&gt; values fall through (SVE0002).
+    /// </summary>
+    private static MemberKind? RouteScalar(ITypeSymbol type)
+    {
         switch (type.SpecialType)
         {
             case SpecialType.System_Int32: return MemberKind.Int;
@@ -969,11 +1110,6 @@ internal static class SealedEnvModel
                 return type.NullableAnnotation == NullableAnnotation.Annotated
                     ? MemberKind.NullableString
                     : MemberKind.String;
-        }
-
-        if (type is IArrayTypeSymbol array && array.ElementType.SpecialType == SpecialType.System_String)
-        {
-            return MemberKind.StringArray;
         }
 
         if (type is INamedTypeSymbol named)

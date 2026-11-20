@@ -69,10 +69,15 @@ SealedEnvModel.Transform  ── per carrier ───────────�
 │   per member (both modes share ExtractMember):
 │     no [EnvKey]         → SVE0007 (blocking)
 │     type routing        → MemberKind (Int/Long/Double/Bool/String/NullableString/
-│                           TimeSpan/Uri/Guid/Enum/Parsable/Custom/StringArray)
+│                           TimeSpan/Uri/Guid/Enum/Parsable/Custom); lists (T[] /
+│                           IReadOnlyList<T>) route by ELEMENT to the same kind,
+│                           emitted as <Kind>Array with the separator
 │                           no route → SVE0002 (blocking)
-│     Parser shape        → public static T Parse(string) else SVE0006 (blocking)
-│     Default check       → mirrors runtime parse rules, else SVE0004 (blocking)
+│     Parser shape        → public static T Parse(string) — member type for whole-
+│                           value parse, element type for lists — else SVE0006 (blocking)
+│     Default check       → mirrors runtime parse rules; lists split the default
+│                           with the mirrored escape-aware splitter and validate
+│                           entry-wise, else SVE0004 (blocking)
 │     key resolution      → explicit key or SCREAMING_SNAKE_CASE (EnvKeyDerivation,
 │                           underscores only at acronym boundaries)
 │   duplicate resolved key → SVE0003 (non-blocking: generation continues)
@@ -142,9 +147,9 @@ floor so older hosts can still load it.
 | ID | Meaning | Blocks generation |
 |---|---|---|
 | SVE0001 | `[EnvKey]` on a parameter outside a primary constructor | n/a (no carrier) |
-| SVE0002 | Member type has no parser route | yes |
+| SVE0002 | Member type has no parser route (scalars, `T[]` / `IReadOnlyList<T>` of a routable element) | yes |
 | SVE0003 | Two members resolve to the same env key | no (both bind the same value) |
-| SVE0004 | `Default` does not parse as the member type | yes |
+| SVE0004 | `Default` does not parse as the member type (lists: entry-wise, separator-mirrored) | yes |
 | SVE0005 | Carrier is not `sealed` (record structs pass implicitly) | yes |
 | SVE0006 | `Parser` lacks `public static T Parse(string)` | yes |
 | SVE0007 | Env-managed member without `[EnvKey]` (unmarked ctor param, or an unmarked partial property on a carrier with no other binding surface) | yes |

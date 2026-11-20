@@ -32,7 +32,7 @@ Target: NuGet v0.1.0-alpha in roughly 8–10 focused evenings (~3–4 weekends).
 | Empty string | Treated as unset by default (`EmptyAsUnset = true`), opt-out flag | Matches dotenv conventions; avoids the classic `PORT=""` footgun |
 | Unknown types | Must implement `IParsable<T>` (static abstract interface) or supply `[EnvKey(Parser = typeof(X))]` | Generated code calls `IParsable<T>.Parse(value, null)` directly on the concrete type — fully AOT-safe, zero boxing |
 | Culture | Always `CultureInfo.InvariantCulture` | Config is not locale-dependent |
-| Collections | `string[]`, `IReadOnlyList<string>`, `T[]` where `T : IParsable<T>` — split on `Separator` (default `,`), `\,` escape, trim entries | Covers 90% of real use; document loudly |
+| Collections | `string[]`, `IReadOnlyList<string>`, `T[]` where `T : IParsable<T>` — split on `Separator` (default `,`), `\,` escape, trim entries | DONE EARLY (pulled into 0.9.0.4), and broader: lists route by ELEMENT through the whole scalar table (enum arrays, per-entry custom parsers), entries parse under the scalar rules (strict double etc.), one Invalid per member naming each bad entry's index. Flag-combo enums inside lists: escape the combo's separator or change Separator |
 
 ### Public surface (runtime package)
 

@@ -498,6 +498,256 @@ public static class SealedEnvLoader
         return raw is null ? [] : SplitEntries(raw, separator);
     }
 
+    /// <summary>
+    ///     Parses one list entry. Returns the value plus, on failure, the per-entry
+    ///     reason that goes into the member's single aggregate error
+    ///     (<see langword="null" /> reason = "use the member-level expectation text").
+    /// </summary>
+    private delegate (bool Ok, T Value, string? Reason) ElementParser<T>(string raw);
+
+    /// <summary>
+    ///     Shared core of every parsed-element list: resolve, split (escape-aware,
+    ///     entries trimmed), parse each entry with the scalar rules, and on any
+    ///     failure record ONE Invalid error for the member listing every bad entry
+    ///     with its 1-based index and reason. EnvError is per-key, so a variable
+    ///     contributes at most one error no matter how many entries are malformed.
+    /// </summary>
+    private static T[] ArrayCore<T>(
+        IEnvProvider provider, string key, string displayName, string typeName,
+        string? @default, bool required, bool allowEmpty, bool emptyAsUnset,
+        char separator, ElementParser<T> parseEntry, string expectation,
+        ref List<EnvError> errors)
+    {
+        var raw = Resolve(provider, key, displayName, typeName, @default, required, allowEmpty, emptyAsUnset, false, ref errors);
+        if (raw is null)
+        {
+            return [];
+        }
+
+        var entries = SplitEntries(raw, separator);
+        var values = new T[entries.Length];
+        List<string>? failures = null;
+        for (var i = 0; i < entries.Length; i++)
+        {
+            var entry = entries[i];
+            (var ok, var value, var reason) = parseEntry(entry);
+            if (ok)
+            {
+                values[i] = value;
+                continue;
+            }
+
+            (failures ??= new List<string>()).Add($"entry {i + 1} \"{entry}\": {reason ?? expectation}");
+        }
+
+        if (failures is not null)
+        {
+            Record(
+                ref errors, key, EnvErrorCode.Invalid, typeName,
+                $"Environment variable '{key}' has value \"{raw}\" which is not valid for {displayName} — "
+                + string.Join("; ", failures) + ".");
+            return [];
+        }
+
+        return values;
+    }
+
+    public static int[] IntArray(
+        IEnvProvider provider, string key, string displayName,
+        string? @default, bool required, bool allowEmpty, bool emptyAsUnset,
+        char separator,
+        ref List<EnvError> errors)
+    {
+        return ArrayCore(provider, key, displayName, "int[]", @default, required, allowEmpty, emptyAsUnset,
+            separator,
+            static raw => int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value)
+                ? (true, value, (string?)null)
+                : (false, default, (string?)null),
+            "not a valid Int32 value",
+            ref errors);
+    }
+
+    public static long[] LongArray(
+        IEnvProvider provider, string key, string displayName,
+        string? @default, bool required, bool allowEmpty, bool emptyAsUnset,
+        char separator,
+        ref List<EnvError> errors)
+    {
+        return ArrayCore(provider, key, displayName, "long[]", @default, required, allowEmpty, emptyAsUnset,
+            separator,
+            static raw => long.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value)
+                ? (true, value, (string?)null)
+                : (false, default, (string?)null),
+            "not a valid Int64 value",
+            ref errors);
+    }
+
+    public static double[] DoubleArray(
+        IEnvProvider provider, string key, string displayName,
+        string? @default, bool required, bool allowEmpty, bool emptyAsUnset,
+        char separator,
+        ref List<EnvError> errors)
+    {
+        return ArrayCore(provider, key, displayName, "double[]", @default, required, allowEmpty, emptyAsUnset,
+            separator,
+            // Same strict styles as the scalar Double: no AllowThousands.
+            static raw => double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out var value)
+                ? (true, value, (string?)null)
+                : (false, default, (string?)null),
+            "not a valid Double value",
+            ref errors);
+    }
+
+    public static bool[] BoolArray(
+        IEnvProvider provider, string key, string displayName,
+        string? @default, bool required, bool allowEmpty, bool emptyAsUnset,
+        char separator,
+        ref List<EnvError> errors)
+    {
+        return ArrayCore(provider, key, displayName, "bool[]", @default, required, allowEmpty, emptyAsUnset,
+            separator,
+            static raw => raw.Equals("true", StringComparison.OrdinalIgnoreCase) || raw == "1" || raw.Equals("on", StringComparison.OrdinalIgnoreCase)
+                ? (true, true, (string?)null)
+                : raw.Equals("false", StringComparison.OrdinalIgnoreCase) || raw == "0" || raw.Equals("off", StringComparison.OrdinalIgnoreCase)
+                    ? (true, false, (string?)null)
+                    : (false, default, "expected 1, 0, true, false, on, or off"),
+            "not a valid boolean value",
+            ref errors);
+    }
+
+    public static TimeSpan[] TimeSpanArray(
+        IEnvProvider provider, string key, string displayName,
+        string? @default, bool required, bool allowEmpty, bool emptyAsUnset,
+        char separator,
+        ref List<EnvError> errors)
+    {
+        return ArrayCore(provider, key, displayName, "TimeSpan[]", @default, required, allowEmpty, emptyAsUnset,
+            separator,
+            static raw => System.TimeSpan.TryParse(raw, CultureInfo.InvariantCulture, out var value)
+                ? (true, value, (string?)null)
+                : (false, default, (string?)null),
+            "not a valid TimeSpan value",
+            ref errors);
+    }
+
+    public static Uri[] UriArray(
+        IEnvProvider provider, string key, string displayName,
+        string? @default, bool required, bool allowEmpty, bool emptyAsUnset,
+        char separator,
+        ref List<EnvError> errors)
+    {
+        return ArrayCore(provider, key, displayName, "Uri[]", @default, required, allowEmpty, emptyAsUnset,
+            separator,
+            // Same platform-invariant absoluteness rule as the scalar Uri.
+            static raw => HasExplicitUriScheme(raw) && System.Uri.TryCreate(raw, UriKind.Absolute, out var value)
+                ? (true, value, (string?)null)
+                : (false, default(Uri)!, "expected an absolute URI"),
+            "not a valid absolute URI",
+            ref errors);
+    }
+
+    public static Guid[] GuidArray(
+        IEnvProvider provider, string key, string displayName,
+        string? @default, bool required, bool allowEmpty, bool emptyAsUnset,
+        char separator,
+        ref List<EnvError> errors)
+    {
+        return ArrayCore(provider, key, displayName, "Guid[]", @default, required, allowEmpty, emptyAsUnset,
+            separator,
+            static raw => System.Guid.TryParse(raw, out var value) ? (true, value, (string?)null) : (false, default, (string?)null),
+            "not a valid GUID",
+            ref errors);
+    }
+
+    /// <summary>
+    ///     Enum list: each entry keeps the scalar <c>Enum.TryParse</c> semantics
+    ///     (member names case-insensitively, numeric values, flag combinations).
+    ///     A flag combo containing the separator must be escaped (<c>"Read\,Write"</c>)
+    ///     or the separator changed — the list split always happens first.
+    /// </summary>
+    public static T[] EnumArray<T>(
+        IEnvProvider provider, string key, string displayName,
+        string? @default, bool required, bool allowEmpty, bool emptyAsUnset,
+        char separator,
+        ref List<EnvError> errors)
+        where T : struct, Enum
+    {
+        var typeName = typeof(T).Name + "[]";
+        return ArrayCore<T>(provider, key, displayName, typeName, @default, required, allowEmpty, emptyAsUnset,
+            separator,
+            static raw => System.Enum.TryParse<T>(raw, true, out var value)
+                ? (true, value, (string?)null)
+                : (false, default, $"expected one of: {string.Join(", ", System.Enum.GetNames<T>())}"),
+            $"not a valid {typeof(T).Name} value",
+            ref errors);
+    }
+
+    /// <summary>
+    ///     List of any <see cref="IParsable{T}" /> element type, invariant culture.
+    ///     Parsers are user code: every exception and every null answer for a present
+    ///     entry degrades into the entry's reason in the member's single error.
+    /// </summary>
+    public static T[] ParsableArray<T>(
+        IEnvProvider provider, string key, string displayName,
+        string? @default, bool required, bool allowEmpty, bool emptyAsUnset,
+        char separator,
+        ref List<EnvError> errors)
+        where T : IParsable<T>
+    {
+        var typeName = typeof(T).Name + "[]";
+        return ArrayCore<T>(provider, key, displayName, typeName, @default, required, allowEmpty, emptyAsUnset,
+            separator,
+            static raw =>
+            {
+                try
+                {
+                    var value = T.Parse(raw, CultureInfo.InvariantCulture);
+                    return value is null
+                        ? (false, default(T)!, "the parser returned null")
+                        : (true, value, (string?)null);
+                }
+                catch (Exception exception)
+                {
+                    return (false, default(T)!, $"the parser threw {exception.GetType().Name}: {exception.Message}");
+                }
+            },
+            $"not a valid {typeof(T).Name} value",
+            ref errors);
+    }
+
+    /// <summary>
+    ///     List with a custom per-entry parser (<see cref="EnvKeyAttribute.Parser" />
+    ///     exposing <c>public static T Parse(string)</c> for the ELEMENT type).
+    ///     Same user-code contract as <see cref="Parsable{T}" />: any exception or
+    ///     null answer is an entry reason, never an escaped exception.
+    /// </summary>
+    public static T[] CustomArray<T>(
+        IEnvProvider provider, string key, string displayName,
+        string? @default, bool required, bool allowEmpty, bool emptyAsUnset,
+        char separator, Func<string, T> parse,
+        ref List<EnvError> errors)
+    {
+        ArgumentNullException.ThrowIfNull(parse);
+        var typeName = typeof(T).Name + "[]";
+        return ArrayCore<T>(provider, key, displayName, typeName, @default, required, allowEmpty, emptyAsUnset,
+            separator,
+            // Non-static on purpose: the lambda captures the caller's parser delegate.
+            raw =>
+            {
+                try
+                {
+                    var value = parse(raw);
+                    return value is null ? (false, default(T)!, "the parser returned null") : (true, value, (string?)null);
+                }
+                catch (Exception exception)
+                {
+                    return (false, default(T)!, $"the parser threw {exception.GetType().Name}: {exception.Message}");
+                }
+            },
+            "not a valid entry",
+            ref errors);
+    }
+
     internal static string[] SplitEntries(string raw, char separator)
     {
         var entries = new List<string>();

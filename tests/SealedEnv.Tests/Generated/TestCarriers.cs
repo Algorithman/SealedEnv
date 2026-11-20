@@ -84,6 +84,31 @@ internal sealed partial class HostSettings([EnvKey(Default = "localhost")] strin
     public string Host { get; } = Host;
 }
 
+/// <summary>
+///     Parsed-element lists: every element kind of the scalar surface appears as a
+///     list member — int[], enum[], IParsable[], custom-parser[] (per-entry),
+///     IReadOnlyList&lt;string&gt; — plus separator variation and element-wise defaults.
+/// </summary>
+[SealedEnv(Prefix = "ARR_")]
+internal sealed partial record ArrayConfig(
+    [EnvKey] int[] Ports,
+    [EnvKey(Separator = ';')] double[] Rates,
+    [EnvKey] LogLevel[] Levels,
+    [EnvKey] Guid[] TenantIds,
+    [EnvKey] Port[] Gateways, // IParsable elements (strict range-checked parser)
+    [EnvKey(Parser = typeof(VatRate))] VatRate[] Vats, // per-entry custom parser
+    [EnvKey] IReadOnlyList<string> Aliases, // IReadOnlyList<string> alias of the string split
+    [EnvKey(Default = "1,2")] int[] SmallDefaults);
+
+/// <summary>Property-mode carrier with a list member (defaults only, always loads).</summary>
+[SealedEnv(Prefix = "ARR_")]
+internal sealed partial class ArrayPropertyConfig
+{
+    [EnvKey(Default = "5,6")] public partial int[] Ports { get; }
+
+    [EnvKey(Default = "Info")] public partial IReadOnlyList<LogLevel> Levels { get; }
+}
+
 /// <summary>Custom-parsed type with a reference-type parser route (EnvKeyAttribute.Parser).</summary>
 internal sealed class VatRate
 {

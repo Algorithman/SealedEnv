@@ -8,6 +8,15 @@ All notable changes to SealedEnv are documented here. The format follows
 
 ### Added
 
+- **Parsed-element collections**: list members now bind beyond `string[]` — `T[]` and
+  `IReadOnlyList<T>` for every element kind the scalar surface supports (`int[]`, `Guid[]`,
+  `LogLevel[]`, `DateOnly[]` via `IParsable<T>`, …), each entry parsed by the element's exact
+  scalar rule (strict invariant-culture doubles, the bool token set, absolute-only Uris). Split
+  semantics are unchanged (`Separator`, `\,` escape, trimmed/preserved entries). `[EnvKey(Parser =
+  typeof(X))] X[] Items` now parses **per entry** (a parser returning the whole array still binds
+  unsplit). Every malformed entry folds into one `Invalid` error per member with 1-based entry
+  indexes; element-wise `Default`s are validated at compile time with the same escape-aware
+  splitter (`SVE0004`).
 - Multi-targeting: the runtime library ships for `net7.0`, `net8.0`, `net9.0`,
   `net10.0` and `net11.0` (net7 is the floor — the AOT-safe `IParsable<T>` parse
   route shipped there). The runtime test suite now runs on every maintained

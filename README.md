@@ -138,9 +138,18 @@ default; `string?` members never raise `Empty`. `EmptyAsUnset` defaults to
 | enums | `Enum.Parse` semantics, case-insensitive; numeric and flag lists accepted |
 | `IParsable<T>` | `T.Parse(value, null)` called directly — zero boxing, AOT-safe |
 | custom `[EnvKey(Parser = typeof(X))]` | `public static T Parse(string)` method group |
-| `string[]` | split on `Separator` (default `,`), `\,` escape, entries trimmed |
+| lists of the above | `T[]` / `IReadOnlyList<T>` — split on `Separator` (default `,`), `\,` escape, entries trimmed, **each entry parsed by the element's scalar rule** (strict doubles, bool tokens, absolute Uris, `Enum.TryParse` member/numeric/flags) |
+| `string[]`, `IReadOnlyList<string>` | split as above, entries kept as strings |
 
-Unsupported parameter types fail compilation with `SVE0002` — never silently.
+List members whose type implements `IParsable<T>` per element (`DateOnly[]`, `decimal[]`,
+`Point[]`…) route automatically; `[EnvKey(Parser = typeof(X))] X[] Items` parses **each entry**
+with `X.Parse`, while a parser returning the whole array (`static int[] Parse(string)`) binds
+unsplit — your choice. A malformed entry is one `Invalid` error for the member, naming every bad
+entry with its 1-based index (`entry 2 "abc": not a valid Int32 value`) — one variable, one error.
+A flag-enum combo containing the separator must be escaped (`"Read\,Write, Execute"` is two
+entries: the combo + `Execute`) or use a different `Separator`.
+
+Unsupported types fail compilation with `SVE0002` — never silently.
 
 ## Compile-time diagnostics
 

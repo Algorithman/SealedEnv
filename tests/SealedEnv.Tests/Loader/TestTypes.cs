@@ -80,6 +80,47 @@ public enum Perms : ulong
 }
 
 /// <summary>
+///     <see cref="IParsable{T}" /> whose TEXT form contains the default separator
+///     ("x,y") — a list of these only works with an escaped or different separator,
+///     pinning that the entry escape composes with element parsing.
+/// </summary>
+public readonly record struct Point(int X, int Y) : IParsable<Point>
+{
+    private static Point ParseInternal(string s)
+    {
+        var parts = s.Split(',');
+        if (parts.Length == 2 &&
+            int.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var x) &&
+            int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var y))
+        {
+            return new Point(x, y);
+        }
+
+        throw new FormatException($"'{s}' is not a valid point.");
+    }
+
+    static Point IParsable<Point>.Parse(string s, IFormatProvider? provider) => ParseInternal(s);
+
+    static bool IParsable<Point>.TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, out Point result)
+    {
+        if (s is not null)
+        {
+            try
+            {
+                result = ParseInternal(s);
+                return true;
+            }
+            catch (FormatException)
+            {
+            }
+        }
+
+        result = default;
+        return false;
+    }
+}
+
+/// <summary>
 ///     Reference-type <see cref="IParsable{T}" /> whose Parse deliberately returns
 ///     null — attacking the loader's contract: a null from a present value must be
 ///     an Invalid error, never a smuggled null member.

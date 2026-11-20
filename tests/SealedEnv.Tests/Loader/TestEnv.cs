@@ -30,6 +30,13 @@ internal sealed class TestEnv
 
     private IEnvProvider Provider => new DictionaryEnvProvider(_vars);
 
+    /// <summary>
+    ///     The provider under this harness, for calling <see cref="SealedEnvLoader" />
+    ///     helpers directly (the parsed-array tests exercise every wrapper argument
+    ///     explicitly, which the thin typed wrappers below cannot express).
+    /// </summary>
+    public IEnvProvider AsProvider() => Provider;
+
     /// <summary>The single recorded error, with a useful message when there are more.</summary>
     public EnvError SingleError
     {

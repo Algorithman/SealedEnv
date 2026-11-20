@@ -253,28 +253,40 @@ internal static class SealedEnvEmitter
 
     private static string HelperCall(EnvTargetModel target, EnvMemberModel member, string displayNamePrefix)
     {
-        return "global::SealedEnv.SealedEnvLoader." +
-               (member.Kind switch
-               {
-                   MemberKind.Int => $"Int({Args(target, member, displayNamePrefix)})",
-                   MemberKind.Long => $"Long({Args(target, member, displayNamePrefix)})",
-                   MemberKind.Double => $"Double({Args(target, member, displayNamePrefix)})",
-                   MemberKind.Bool => $"Bool({Args(target, member, displayNamePrefix)})",
-                   MemberKind.String => $"String({Args(target, member, displayNamePrefix)})",
-                   MemberKind.NullableString => $"NullableString({Args(target, member, displayNamePrefix)})",
-                   MemberKind.TimeSpan => $"TimeSpan({Args(target, member, displayNamePrefix)})",
-                   MemberKind.Uri => $"Uri({Args(target, member, displayNamePrefix)})",
-                   MemberKind.Guid => $"Guid({Args(target, member, displayNamePrefix)})",
-                   MemberKind.Enum => $"Enum<{member.TypeText}>({Args(target, member, displayNamePrefix)})",
-                   MemberKind.Parsable => $"Parsable<{member.TypeText}>({Args(target, member, displayNamePrefix)})",
-                   MemberKind.Custom => $"Custom<{member.TypeText}>({Args(target, member, displayNamePrefix, true)})",
-                   MemberKind.StringArray => $"StringArray({Args(target, member, displayNamePrefix, separator: true)})",
-                   _ => throw new InvalidOperationException($"Unknown member kind: {member.Kind}"),
-               });
+        // List members target the same runtime rule with the "Array" suffix
+        // (String → StringArray, Enum → EnumArray, Custom → CustomArray): the
+        // element parsing is the scalar rule, applied per entry.
+        var helperName = member.Kind switch
+        {
+            MemberKind.Int => "Int",
+            MemberKind.Long => "Long",
+            MemberKind.Double => "Double",
+            MemberKind.Bool => "Bool",
+            MemberKind.String => "String",
+            MemberKind.NullableString => "NullableString",
+            MemberKind.TimeSpan => "TimeSpan",
+            MemberKind.Uri => "Uri",
+            MemberKind.Guid => "Guid",
+            MemberKind.Enum => "Enum",
+            MemberKind.Parsable => "Parsable",
+            MemberKind.Custom => "Custom",
+            _ => throw new InvalidOperationException($"Unknown member kind: {member.Kind}"),
+        };
+
+        if (member.IsArray)
+        {
+            helperName += "Array";
+        }
+
+        // Generic helpers take the ELEMENT type for lists (EnumArray<LogLevel>) and
+        // the member type for scalars (Custom<VatRate>).
+        var isGeneric = member.Kind is MemberKind.Enum or MemberKind.Parsable or MemberKind.Custom;
+        var genericText = isGeneric ? (member.IsArray ? member.ElementTypeText : member.TypeText) : string.Empty;
+
+        return $"global::SealedEnv.SealedEnvLoader.{helperName}{(isGeneric ? $"<{genericText}>" : string.Empty)}({Args(target, member, displayNamePrefix)})";
     }
 
-    private static string Args(EnvTargetModel target, EnvMemberModel member, string displayNamePrefix, bool customParser = false,
-        bool separator = false)
+    private static string Args(EnvTargetModel target, EnvMemberModel member, string displayNamePrefix)
     {
         var args = new StringBuilder(256);
         args.Append("provider, ");
@@ -284,14 +296,23 @@ internal static class SealedEnvEmitter
         args.Append(member.Required ? "true" : "false").Append(", ");
         args.Append(member.AllowEmpty ? "true" : "false").Append(", ");
         args.Append(target.EmptyAsUnset ? "true" : "false");
-        if (customParser)
+
+        // Whole-value custom parser sits before ref; list members take the separator
+        // (StringArray position), and a per-entry custom parser trails it
+        // (CustomArray(provider, ..., separator, parse, ref errors)).
+        if (member.Kind == MemberKind.Custom && !member.IsArray)
         {
             args.Append(", ").Append(member.ParserText).Append(".Parse");
         }
 
-        if (separator)
+        if (member.IsArray)
         {
             args.Append(", ").Append(CharLiteral(member.Separator));
+        }
+
+        if (member.Kind == MemberKind.Custom && member.IsArray)
+        {
+            args.Append(", ").Append(member.ParserText).Append(".Parse");
         }
 
         args.Append(", ref __errors");

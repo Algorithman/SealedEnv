@@ -185,6 +185,74 @@ public class GeneratedLoadTests
         Assert.Contains("\"-1\"", vatError.Message);
     }
 
+    // ---- parsed-element list carriers ----
+
+    private static DictionaryEnvProvider ArrayHappyEnv()
+    {
+        return new DictionaryEnvProvider(new Dictionary<string, string?>
+        {
+            ["ARR_PORTS"] = "80, 443 ,8080",
+            ["ARR_RATES"] = "0.1;0.2",
+            ["ARR_LEVELS"] = "warning,3",
+            ["ARR_TENANTIDS"] = "6f9619ff-8b86-d011-b42d-00c04fc964ff",
+            ["ARR_GATEWAYS"] = "80,443",
+            ["ARR_VATS"] = "0.2, 0.05",
+            ["ARR_ALIASES"] = "api.example.com, legacy.example.com",
+        });
+    }
+
+    [Fact]
+    public void Array_carriers_bind_every_element_kind()
+    {
+        var config = ArrayConfig.Load(ArrayHappyEnv());
+
+        Assert.Equal([80, 443, 8080,], config.Ports);
+        Assert.Equal([0.1, 0.2,], config.Rates); // ';' separator, entries trimmed
+        Assert.Equal([LogLevel.Warning, LogLevel.Error,], config.Levels);
+        Assert.Equal([new Guid("6f9619ff-8b86-d011-b42d-00c04fc964ff"),], config.TenantIds);
+        Assert.Equal([new Port(80), new Port(443),], config.Gateways); // IParsable elements
+        Assert.Equal(0.2m, config.Vats[0].Value); // per-entry custom parser
+        Assert.Equal(0.05m, config.Vats[1].Value);
+        Assert.Equal(["api.example.com", "legacy.example.com",], config.Aliases);
+        Assert.Equal([1, 2,], config.SmallDefaults); // element-wise attribute default
+    }
+
+    [Fact]
+    public void Array_carriers_aggregate_one_error_per_member_naming_bad_entries()
+    {
+        var provider = new DictionaryEnvProvider(new Dictionary<string, string?>
+        {
+            ["ARR_PORTS"] = "80,abc,x", // two bad entries → ONE error naming both
+            ["ARR_RATES"] = "0.1;1,234", // "1,234" entry: thousands separator rejected like the scalar
+            // everything else unset without default → Missing
+        });
+
+        var exception = Assert.Throws<SealedEnvException>(() => ArrayConfig.Load(provider));
+
+        var portsError = Assert.Single(exception.Errors, static e => e.Key == "ARR_PORTS");
+        Assert.Equal(EnvErrorCode.Invalid, portsError.Code);
+        Assert.Equal("int[]", portsError.TypeName);
+        Assert.Contains("entry 2 \"abc\": not a valid Int32 value", portsError.Message);
+        Assert.Contains("entry 3 \"x\": not a valid Int32 value", portsError.Message);
+
+        // The strict double rule holds per entry: AllowThousands is NOT smuggled in.
+        var ratesError = Assert.Single(exception.Errors, static e => e.Key == "ARR_RATES");
+        Assert.Contains("entry 2 \"1,234\": not a valid Double value", ratesError.Message);
+
+        // 2 Invalid (Ports, Rates) + 5 Missing (Levels, TenantIds, Gateways, Vats,
+        // Aliases — SmallDefaults has an attribute default): one report, every variable.
+        Assert.Equal(7, exception.Errors.Count);
+    }
+
+    [Fact]
+    public void Property_mode_carriers_bind_list_members()
+    {
+        var config = ArrayPropertyConfig.Load(new DictionaryEnvProvider(new Dictionary<string, string?>()));
+
+        Assert.Equal([5, 6,], config.Ports);
+        Assert.Equal([LogLevel.Info,], config.Levels);
+    }
+
     [Fact]
     public void The_full_carrier_is_culture_invariant_under_a_german_process()
     {
