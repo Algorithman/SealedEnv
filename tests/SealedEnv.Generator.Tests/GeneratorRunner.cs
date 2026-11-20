@@ -102,8 +102,43 @@ internal static class GeneratorRunner
         return (firstGenerated, secondGenerated, secondRun);
     }
 
+    /// <summary>
+    ///     Full consumer simulation at a pinned language version: compile the source,
+    ///     run the generator, and compile the OUTPUT (user trees + generated trees)
+    ///     again — the diagnostics of the second compilation are what a consumer with
+    ///     that LangVersion would actually see. This is the C#-floor gate: generated
+    ///     code and carrier syntax must both survive the minimum supported version.
+    /// </summary>
+    public static (ImmutableArray<Diagnostic> Diagnostics, string? GeneratedSource) RunCompiled(string source, LanguageVersion languageVersion)
+    {
+        var parseOptions = new CSharpParseOptions(languageVersion);
+        var first = CreateCompilation(new[] { CSharpSyntaxTree.ParseText(source, parseOptions), });
+
+        // The driver must emit at the SAME language version as the user's tree (a
+        // compilation cannot mix versions) — and that is precisely the consumer
+        // scenario: the project parses the emitted file at ITS LangVersion, so a
+        // too-new construct in the generated code surfaces as the consumer's error.
+        var driver = CSharpGeneratorDriver.Create(
+            new[] { new SealedEnvGenerator().AsSourceGenerator(), },
+            parseOptions: parseOptions);
+        driver.RunGeneratorsAndUpdateCompilation(first, out var outputCompilation, out _);
+
+        var generatedTree = outputCompilation.SyntaxTrees
+            .FirstOrDefault(static tree => tree.FilePath.EndsWith(".SealedEnv.g.cs"));
+
+        // Same noise filter as Run: CS0009 is the native-only dlls in the runtime dir.
+        var diagnostics = outputCompilation.GetDiagnostics()
+            .Where(static d => d.Severity == DiagnosticSeverity.Error && d.Id != "CS0009")
+            .ToImmutableArray();
+
+        return (diagnostics, generatedTree?.ToString());
+    }
+
     private static CSharpCompilation CreateCompilation(SyntaxTree[] syntaxTrees)
     {
+        // LanguageVersion is a parse option in Roslyn: every tree carries its own
+        // parse options (the callers build them) and the compiler gates features
+        // per tree — compilation options need no language version.
         return CSharpCompilation.Create(
             "GeneratorTests.Compilation",
             syntaxTrees,

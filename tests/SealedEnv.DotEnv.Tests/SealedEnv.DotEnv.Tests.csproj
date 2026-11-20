@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Same maintained-runtime matrix as SealedEnv.Tests (see its csproj for the
+         net7 host rationale). -->
+    <TargetFrameworks>net8.0;net9.0;net10.0;net11.0</TargetFrameworks>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector"/>
+    <PackageReference Include="Microsoft.NET.Test.Sdk"/>
+    <PackageReference Include="xunit"/>
+    <PackageReference Include="xunit.runner.visualstudio"/>
+  </ItemGroup>
+
+  <!-- The generator runs live in this project so the E2E carrier loads from a real
+       .env file through members generated during THIS build. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\SealedEnv\SealedEnv.csproj"/>
+    <ProjectReference Include="..\..\src\SealedEnv\Generators\SealedEnvGenerator.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false"/>
+    <ProjectReference Include="..\..\src\SealedEnv.DotEnv\SealedEnv.DotEnv.csproj"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit"/>
+  </ItemGroup>
+
+</Project>

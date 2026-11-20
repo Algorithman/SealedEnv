@@ -110,8 +110,11 @@ jobs:
           fi
       - name: Pack
         # ContinuousIntegrationBuild normalizes paths so SourceLink URLs and the
-        # embedded sources are reproducible on any machine.
-        run: dotnet pack src/SealedEnv -c Release -p:ContinuousIntegrationBuild=true -o artifacts
+        # embedded sources are reproducible on any machine. Both packages carry
+        # the same VersionPrefix; the DotEnv nuspec depends on the core package.
+        run: |
+          dotnet pack src/SealedEnv -c Release -p:ContinuousIntegrationBuild=true -o artifacts
+          dotnet pack src/SealedEnv.DotEnv -c Release -p:ContinuousIntegrationBuild=true -o artifacts
       - name: NuGet login (trusted publishing)
         # Exchanges this job's OIDC token for a ~1-hour push token against the
         # trust registered on nuget.org — no long-lived secret involved.

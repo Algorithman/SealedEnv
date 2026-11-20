@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Same TFM band as the core runtime: net7 is the floor (IParsable<T> era),
+         so a DotEnv consumer can layer the file provider onto any supported app.
+         Nullable/LangVersion/signing/version flow from Directory.Build.props. -->
+    <TargetFrameworks>net7.0;net8.0;net9.0;net10.0;net11.0</TargetFrameworks>
+    <!-- Pure runtime provider: no generated code paths, AOT-safe by construction. -->
+    <IsAotCompatible>true</IsAotCompatible>
+    <Description>.env file provider for SealedEnv — layer dotenv files under the process environment via the IEnvProvider seam.</Description>
+    <PackageTags>environment-variables;config;dotenv;env;source-generator;aot</PackageTags>
+    <PackageProjectUrl>https://github.com/Algorithman/SealedEnv</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Algorithman/SealedEnv.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+  </PropertyGroup>
+
+  <!-- SourceLink comes from the SDK's built-in git integration (see core csproj). -->
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Normal library reference: the nuspec gains a SealedEnv (>= VersionPrefix)
+         dependency, and consumers get the generator from the core package. -->
+    <ProjectReference Include="..\SealedEnv\SealedEnv.csproj"/>
+  </ItemGroup>
+
+</Project>
