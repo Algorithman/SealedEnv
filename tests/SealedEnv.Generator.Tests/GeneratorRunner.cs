@@ -27,7 +27,13 @@ internal static class GeneratorRunner
 
     public static (ImmutableArray<Diagnostic> Diagnostics, string? GeneratedSource) Run(string source)
     {
-        var compilation = CreateCompilation(new[] { CSharpSyntaxTree.ParseText(source), });
+        return Run(source, LanguageVersion.Default);
+    }
+
+    /// <summary>LanguageVersion override: pins what the minimum supported consumer can compile.</summary>
+    public static (ImmutableArray<Diagnostic> Diagnostics, string? GeneratedSource) Run(string source, LanguageVersion languageVersion)
+    {
+        var compilation = CreateCompilation(new[] { CSharpSyntaxTree.ParseText(source, new CSharpParseOptions(languageVersion)), });
 
         var runResult = CSharpGeneratorDriver
             .Create(new SealedEnvGenerator())

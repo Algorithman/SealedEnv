@@ -46,7 +46,9 @@ internal sealed record EnvMemberModel(
     char Separator,
     string? ParserText, // fully qualified type owning the static Parse for Custom
     string? Description, // [EnvKey(Description = ...)] — surfaced by the doc export
-    bool PassWithNullForgiving) // append ! at the constructor argument
+    bool PassWithNullForgiving, // append ! at the constructor argument
+    string AnnotatedTypeText = "", // includes ? on annotated reference types; property-mode fields/accessors/ctor params
+    string AccessibilityText = "") // declared accessibility of an [EnvKey] partial property, verbatim
 {
     public string VariableName => "__" + ParameterName;
 
@@ -72,7 +74,8 @@ internal sealed class EnvTargetModel
         ImmutableArray<EnvMemberModel> members,
         ImmutableArray<DiagnosticInfo> diagnostics,
         Location diagnosticLocation,
-        bool generateDocumentation = false)
+        bool generateDocumentation = false,
+        bool propertyMode = false)
     {
         Namespace = @namespace;
         TypeName = typeName;
@@ -84,6 +87,7 @@ internal sealed class EnvTargetModel
         Diagnostics = diagnostics;
         DiagnosticLocation = diagnosticLocation;
         GenerateDocumentation = generateDocumentation;
+        PropertyMode = propertyMode;
     }
 
     public string? Namespace { get; }
@@ -97,6 +101,16 @@ internal sealed class EnvTargetModel
     public Location DiagnosticLocation { get; }
     public bool GenerateDocumentation { get; }
 
+    /// <summary>
+    ///     The carrier binds [EnvKey] partial properties instead of primary-constructor
+    ///     parameters: the emitter adds the implementing declarations plus the private
+    ///     backing fields and the constructor Load builds the carrier through.
+    /// </summary>
+    public bool PropertyMode { get; }
+
+    /// <summary>The first word of <see cref="TypeDeclaration" /> — the type's accessibility.</summary>
+    public string TypeAccessibility => TypeDeclaration.Split(' ')[0];
+
     public bool Equals(EnvTargetModel? other)
     {
         return other is not null &&
@@ -107,6 +121,7 @@ internal sealed class EnvTargetModel
                EmptyAsUnset == other.EmptyAsUnset &&
                SkipGeneration == other.SkipGeneration &&
                GenerateDocumentation == other.GenerateDocumentation &&
+               PropertyMode == other.PropertyMode &&
                Members.SequenceEqual(other.Members) &&
                Diagnostics.SequenceEqual(other.Diagnostics);
     }
@@ -127,6 +142,7 @@ internal sealed class EnvTargetModel
             hash = (hash * 397) ^ EmptyAsUnset.GetHashCode();
             hash = (hash * 397) ^ SkipGeneration.GetHashCode();
             hash = (hash * 397) ^ GenerateDocumentation.GetHashCode();
+            hash = (hash * 397) ^ PropertyMode.GetHashCode();
             return hash;
         }
     }
@@ -234,31 +250,62 @@ internal static class SealedEnvModel
         }
 
         var members = ImmutableArray.CreateBuilder<EnvMemberModel>();
-        var syntaxParameters = ParameterList(context.TargetNode)?.Parameters;
-        var primaryParameters = syntaxParameters?
-            .Select(parameterSyntax => context.SemanticModel.GetDeclaredSymbol(parameterSyntax, cancellationToken))
-            .OfType<IParameterSymbol>()
+        var primaryParameters = ResolvePrimaryParameters(context, typeSymbol, cancellationToken);
+
+        var envKeyProperties = typeSymbol.GetMembers()
+            .OfType<IPropertySymbol>()
+            .Where(static property => property.GetAttributes().Any(IsEnvKeyAttribute))
+            // A user-implemented partial property surfaces as definition + implementation
+            // symbols; the implementation part carries no decision of its own and would
+            // double-report SVE0012.
+            .Where(static property => property.PartialDefinitionPart is null)
             .ToImmutableArray();
 
-        if (syntaxParameters is null)
+        if (envKeyProperties.Length > 0)
         {
-            // The attributed part has no parameter list: either the carrier has no
-            // primary constructor at all (SVE0010), or this is a partial record whose
-            // primary constructor lives on another part. The type symbol sees the
-            // whole declaration across parts — ask it. Implicitly-declared ctors are
-            // excluded: the record copy constructor (one parameter of the carrier's
-            // own type!) must not be mistaken for the primary. If several explicit
-            // parameterized ctors exist (a hand-written chaining ctor), the
-            // parameter count wins; records have exactly one primary.
-            primaryParameters = typeSymbol.InstanceConstructors
-                .Where(static ctor => !ctor.IsImplicitlyDeclared && ctor.Parameters.Length > 0)
-                .OrderByDescending(static ctor => ctor.Parameters.Length)
-                .FirstOrDefault()
-                ?.Parameters;
+            return TransformPropertyMode(
+                typeSymbol,
+                envKeyProperties,
+                primaryParameters,
+                declaration,
+                effectivePrefix,
+                emptyAsUnset,
+                generateDocumentation,
+                attributeLocation,
+                members,
+                diagnostics,
+                cancellationToken);
         }
 
         if (primaryParameters is null)
         {
+            // No primary constructor and no [EnvKey]-marked property: an unmarked
+            // partial property is the only plausible binding candidate the user
+            // declared, so it earns the precise SVE0007 (forgotten [EnvKey]) instead
+            // of the blunter SVE0010. Unrelated partial properties are indistinguishable
+            // from env candidates without the attribute — this only fires when the
+            // carrier has no other binding surface at all.
+            var unmarkedProperties = typeSymbol.GetMembers()
+                .OfType<IPropertySymbol>()
+                .Where(static property => property.IsPartialDefinition &&
+                       !property.IsIndexer &&
+                       !property.IsStatic &&
+                       property.PartialDefinitionPart is null)
+                .ToImmutableArray();
+            if (unmarkedProperties.Length > 0)
+            {
+                foreach (var property in unmarkedProperties)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    diagnostics.Add(new DiagnosticInfo(
+                        "SVE0007",
+                        [property.Name,],
+                        property.Locations.FirstOrDefault() ?? Location.None));
+                }
+
+                return NotGeneratable(typeSymbol, emptyAsUnset, diagnostics, attributeLocation);
+            }
+
             diagnostics.Add(new DiagnosticInfo(
                 "SVE0010",
                 [typeSymbol.Name,],
@@ -270,7 +317,10 @@ internal static class SealedEnvModel
         {
             cancellationToken.ThrowIfCancellationRequested();
             ExtractMember(
-                parameter,
+                parameter.Name,
+                parameter.Type,
+                ParameterLocation(parameter),
+                parameter.GetAttributes(),
                 effectivePrefix,
                 emptyAsUnset,
                 members,
@@ -291,6 +341,221 @@ internal static class SealedEnvModel
             diagnostics.ToImmutable(),
             attributeLocation,
             generateDocumentation);
+    }
+
+    /// <summary>
+    ///     The attributed part has no parameter list: either the carrier has no
+    ///     primary constructor at all (SVE0010), or this is a partial record whose
+    ///     primary constructor lives on another part. The type symbol sees the
+    ///     whole declaration across parts — ask it. Implicitly-declared ctors are
+    ///     excluded: the record copy constructor (one parameter of the carrier's
+    ///     own type!) must not be mistaken for the primary. If several explicit
+    ///     parameterized ctors exist (a hand-written chaining ctor), the
+    ///     parameter count wins; records have exactly one primary.
+    /// </summary>
+    private static ImmutableArray<IParameterSymbol>? ResolvePrimaryParameters(
+        GeneratorAttributeSyntaxContext context,
+        INamedTypeSymbol typeSymbol,
+        CancellationToken cancellationToken)
+    {
+        var syntaxParameters = ParameterList(context.TargetNode)?.Parameters;
+        if (syntaxParameters is { } parameters)
+        {
+            return parameters
+                .Select(parameterSyntax => (ISymbol?)context.SemanticModel.GetDeclaredSymbol(parameterSyntax, cancellationToken))
+                .OfType<IParameterSymbol>()
+                .ToImmutableArray();
+        }
+
+        return typeSymbol.InstanceConstructors
+            .Where(static ctor => !ctor.IsImplicitlyDeclared && ctor.Parameters.Length > 0)
+            .OrderByDescending(static ctor => ctor.Parameters.Length)
+            .FirstOrDefault()
+            ?.Parameters;
+    }
+
+    /// <summary>
+    ///     Property mode: the carrier binds [EnvKey] partial properties instead of
+    ///     primary-constructor parameters. The emitter supplies the implementation
+    ///     parts plus the constructor Load builds the carrier through — so user
+    ///     declarations of either are conflicts (SVE0012 / SVE0013), and mixing both
+    ///     binding styles in one carrier is SVE0011.
+    /// </summary>
+    private static EnvTargetModel TransformPropertyMode(
+        INamedTypeSymbol typeSymbol,
+        ImmutableArray<IPropertySymbol> envKeyProperties,
+        ImmutableArray<IParameterSymbol>? primaryParameters,
+        string declaration,
+        string prefix,
+        bool emptyAsUnset,
+        bool generateDocumentation,
+        Location attributeLocation,
+        ImmutableArray<EnvMemberModel>.Builder members,
+        ImmutableArray<DiagnosticInfo>.Builder diagnostics,
+        CancellationToken cancellationToken)
+    {
+        // SVE0011: both styles marked [EnvKey] — the generated constructor could not
+        // serve the primary ctor and the properties at once.
+        if (primaryParameters is { Length: > 0, } parameters &&
+            parameters.Any(parameter => parameter.GetAttributes().Any(IsEnvKeyAttribute)))
+        {
+            diagnostics.Add(new DiagnosticInfo(
+                "SVE0011",
+                [typeSymbol.Name,],
+                attributeLocation));
+            return NotGeneratable(typeSymbol, emptyAsUnset, diagnostics, attributeLocation);
+        }
+
+        // SVE0013: any explicit instance constructor (the record primary constructor
+        // included — it is user-declared) collides with the generated one and would
+        // otherwise route user constructions to a carrier with default fields.
+        if (typeSymbol.InstanceConstructors.Any(static ctor => !ctor.IsImplicitlyDeclared))
+        {
+            diagnostics.Add(new DiagnosticInfo(
+                "SVE0013",
+                [typeSymbol.Name,],
+                attributeLocation));
+            return NotGeneratable(typeSymbol, emptyAsUnset, diagnostics, attributeLocation);
+        }
+
+        foreach (var property in envKeyProperties)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (!PropertyShapeIsValid(property, typeSymbol, diagnostics))
+            {
+                continue;
+            }
+
+            if (BackingFieldCollides(property, typeSymbol, attributeLocation, diagnostics))
+            {
+                continue;
+            }
+
+            ExtractMember(
+                property.Name,
+                property.Type,
+                property.Locations.FirstOrDefault() ?? Location.None,
+                property.GetAttributes(),
+                prefix,
+                emptyAsUnset,
+                members,
+                diagnostics,
+                AnnotatedTypeText(property.Type),
+                AccessibilityText(property.DeclaredAccessibility));
+        }
+
+        DetectDuplicateKeys(members, diagnostics, attributeLocation);
+        var blocking = diagnostics.Any(static d => SveDiagnostics.BlockingIds.Contains(d.Id));
+
+        return new EnvTargetModel(
+            NamespaceName(typeSymbol),
+            typeSymbol.Name,
+            declaration,
+            typeSymbol.IsValueType,
+            emptyAsUnset,
+            blocking,
+            members.ToImmutable(),
+            diagnostics.ToImmutable(),
+            attributeLocation,
+            generateDocumentation,
+            propertyMode: true);
+    }
+
+    /// <summary>
+    ///     SVE0012: the generator implements the property, so anything beyond a
+    ///     partial get-only instance definition cannot be honored — a wrong shape
+    ///     here either cannot be implemented (set accessor, implementation part
+    ///     already present) or would silently bind nothing (non-partial, static).
+    /// </summary>
+    private static bool PropertyShapeIsValid(
+        IPropertySymbol property,
+        INamedTypeSymbol typeSymbol,
+        ImmutableArray<DiagnosticInfo>.Builder diagnostics)
+    {
+        var problem =
+            property.IsIndexer ? "an indexer cannot be an environment binding"
+            : property.IsStatic ? "it must not be static"
+            : property.IsRequired ? "the 'required' modifier conflicts with the generated constructor"
+            : !property.IsPartialDefinition ? "it must be declared 'partial' so SealedEnv can supply the implementation"
+            : property.PartialImplementationPart is not null ? "it already has an implementation part"
+            : property.SetMethod is not null ? "it must be get-only (no set or init accessor)"
+            : property.GetMethod is null ? "it must have a get accessor"
+            // An unmodified accessor inherits the property's accessibility in the
+            // symbol model — only an explicitly declared one diverges from it.
+            : property.GetMethod.DeclaredAccessibility != property.DeclaredAccessibility
+                ? "the get accessor must not declare its own accessibility"
+            : null;
+
+        if (problem is null)
+        {
+            return true;
+        }
+
+        diagnostics.Add(new DiagnosticInfo(
+            "SVE0012",
+            [property.Name, typeSymbol.Name, problem,],
+            property.Locations.FirstOrDefault() ?? Location.None));
+        return false;
+    }
+
+    /// <summary>
+    ///     SVE0008 for property mode: the emitter adds a private '__' + name backing
+    ///     field per partial property; a user member with that exact name would be
+    ///     a CS0102 duplicate in the generated partial.
+    /// </summary>
+    private static bool BackingFieldCollides(
+        IPropertySymbol property,
+        INamedTypeSymbol typeSymbol,
+        Location location,
+        ImmutableArray<DiagnosticInfo>.Builder diagnostics)
+    {
+        var fieldName = "__" + property.Name;
+        if (typeSymbol.GetMembers(fieldName).Length == 0)
+        {
+            return false;
+        }
+
+        diagnostics.Add(new DiagnosticInfo(
+            "SVE0008",
+            [typeSymbol.Name, fieldName,],
+            location));
+        return true;
+    }
+
+    /// <summary>
+    ///     Fully qualified display text that KEEPS nullable reference annotations —
+    ///     FullyQualifiedFormat drops them, and the emitted field, implementing
+    ///     declaration and constructor parameter must match the declared property
+    ///     type exactly under #nullable enable.
+    /// </summary>
+    private static string AnnotatedTypeText(ITypeSymbol type)
+    {
+        return type.ToDisplayString(AnnotatedTypeFormat);
+    }
+
+    private static readonly SymbolDisplayFormat AnnotatedTypeFormat =
+        SymbolDisplayFormat.FullyQualifiedFormat.WithMiscellaneousOptions(
+            SymbolDisplayFormat.FullyQualifiedFormat.MiscellaneousOptions |
+            SymbolDisplayMiscellaneousOptions.IncludeNullableReferenceTypeModifier);
+
+    private static string AccessibilityText(Accessibility accessibility)
+    {
+        return accessibility switch
+        {
+            Accessibility.Public => "public",
+            Accessibility.Internal => "internal",
+            Accessibility.Private => "private",
+            Accessibility.Protected => "protected",
+            Accessibility.ProtectedAndInternal => "private protected",
+            Accessibility.ProtectedOrInternal => "protected internal",
+            _ => "internal",
+        };
+    }
+
+    private static Location ParameterLocation(IParameterSymbol parameter)
+    {
+        return parameter.Locations.FirstOrDefault() ?? Location.None;
     }
 
     private static EnvTargetModel NotGeneratable(
@@ -389,22 +654,30 @@ internal static class SealedEnvModel
         return $"{accessibility} {modifiers}partial {kind}".Trim();
     }
 
+    /// <summary>
+    ///     Extracts one env binding from a member's [EnvKey] attribute — shared by
+    ///     primary-constructor parameters and partial properties. <paramref name="memberName" />
+    ///     feeds both the derived key and the error display name ('Type.Member').
+    /// </summary>
     private static void ExtractMember(
-        IParameterSymbol parameter,
+        string memberName,
+        ITypeSymbol memberType,
+        Location memberLocation,
+        ImmutableArray<AttributeData> attributes,
         string prefix,
         bool emptyAsUnset,
         ImmutableArray<EnvMemberModel>.Builder members,
-        ImmutableArray<DiagnosticInfo>.Builder diagnostics)
+        ImmutableArray<DiagnosticInfo>.Builder diagnostics,
+        string annotatedTypeText = "",
+        string accessibilityText = "")
     {
-        var attribute = parameter
-            .GetAttributes()
-            .FirstOrDefault(IsEnvKeyAttribute);
+        var attribute = attributes.FirstOrDefault(IsEnvKeyAttribute);
         if (attribute is null)
         {
             diagnostics.Add(new DiagnosticInfo(
                 "SVE0007",
-                [parameter.Name,],
-                parameter.Locations.FirstOrDefault() ?? Location.None));
+                [memberName,],
+                memberLocation));
             return;
         }
 
@@ -445,13 +718,13 @@ internal static class SealedEnvModel
             explicitKey = key;
         }
 
-        var kind = Route(parameter.Type, parser);
+        var kind = Route(memberType, parser);
         if (kind is null)
         {
             diagnostics.Add(new DiagnosticInfo(
                 "SVE0002",
-                [parameter.Name, parameter.Type.ToDisplayString(),],
-                parameter.Locations.FirstOrDefault() ?? Location.None));
+                [memberName, memberType.ToDisplayString(),],
+                memberLocation));
             return;
         }
 
@@ -459,31 +732,31 @@ internal static class SealedEnvModel
 
         // SVE0006: the parser is emitted as a method group, so it must be callable
         // exactly — catching this here beats a confusing error inside generated code.
-        if (parser is not null && !ParserHasValidParseMethod(parser, parameter.Type))
+        if (parser is not null && !ParserHasValidParseMethod(parser, memberType))
         {
             diagnostics.Add(new DiagnosticInfo(
                 "SVE0006",
-                [parser.ToDisplayString(), parameter.Name,],
+                [parser.ToDisplayString(), memberName,],
                 attributeLocation));
             return;
         }
 
         // SVE0004: a malformed Default would make every load fail forever; the same
         // rules the runtime loader applies are checked at compile time.
-        if (defaultValue is not null && !DefaultParsesAs(kind.Value, defaultValue, parameter.Type))
+        if (defaultValue is not null && !DefaultParsesAs(kind.Value, defaultValue, memberType))
         {
             diagnostics.Add(new DiagnosticInfo(
                 "SVE0004",
-                [defaultValue, parameter.Name, parameter.Type.ToDisplayString(),],
+                [defaultValue, memberName, memberType.ToDisplayString(),],
                 attributeLocation));
             return;
         }
 
-        var resolvedKey = prefix + (explicitKey ?? EnvKeyDerivation.Derive(parameter.Name));
+        var resolvedKey = prefix + (explicitKey ?? EnvKeyDerivation.Derive(memberName));
 
         members.Add(new EnvMemberModel(
-            parameter.Name,
-            parameter.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+            memberName,
+            memberType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
             resolvedKey,
             kind.Value,
             required,
@@ -492,7 +765,9 @@ internal static class SealedEnvModel
             separator,
             parser?.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
             description,
-            PassWithNullForgiving(parameter.Type, kind.Value)));
+            PassWithNullForgiving(memberType, kind.Value),
+            annotatedTypeText,
+            accessibilityText));
     }
 
     /// <summary>

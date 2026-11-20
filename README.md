@@ -64,12 +64,39 @@ if (!AppConfig.TryLoad(out var config, out var errors))
 }
 ```
 
+## Partial-property carriers (C# 13)
+
+Prefer explicit property lists over a primary constructor? Declare the bindings
+as **get-only partial properties** and let the generator supply the
+implementation, the backing fields and the constructor `Load()` builds through:
+
+```csharp
+[SealedEnv(Prefix = "MYAPP_")]
+public sealed partial class AppConfig
+{
+    [EnvKey("PORT", Default = "8080")] public partial int Port { get; }
+    [EnvKey(Required = true)] public partial string DbConnection { get; }
+    [EnvKey] public partial TimeSpan ShutdownTimeout { get; }
+}
+
+var config = AppConfig.Load();
+```
+
+Everything else is identical to the primary-constructor mode — same key
+derivation, same semantics matrix, same `Load()`/`TryLoad()`, same provider
+seam, same doc export. A carrier binds **either** primary-constructor parameters
+**or** partial properties, never both (`SVE0011`), and a property carrier may
+not declare its own constructor (`SVE0013`) — `Load()` is the way in. The
+supported shape is a `partial` get-only instance property with no implementation
+part (`SVE0012` says so otherwise); `readonly` structs work, because the
+generated fields are readonly and assigned from the generated constructor only.
+
 ## How keys are derived
 
-Every key is `Prefix` + the parameter name in `SCREAMING_SNAKE_CASE`, with
-underscores only at acronym boundaries:
+Every key is `Prefix` + the member name (parameter or property) in
+`SCREAMING_SNAKE_CASE`, with underscores only at acronym boundaries:
 
-| Parameter | Key (with prefix `MYAPP_`) |
+| Member | Key (with prefix `MYAPP_`) |
 |---|---|
 | `Port` | `MYAPP_PORT` |
 | `DbConnection` | `MYAPP_DBCONNECTION` |
@@ -115,15 +142,18 @@ Unsupported parameter types fail compilation with `SVE0002` — never silently.
 | ID | Meaning |
 |---|---|
 | `SVE0001` | `[EnvKey]` on a parameter outside a primary constructor |
-| `SVE0002` | Parameter type has no parser route |
-| `SVE0003` | Two parameters resolve to the same env key |
-| `SVE0004` | `Default` does not parse as the parameter type |
+| `SVE0002` | Member type has no parser route |
+| `SVE0003` | Two members resolve to the same env key |
+| `SVE0004` | `Default` does not parse as the member type |
 | `SVE0005` | Carrier type is not `sealed` |
 | `SVE0006` | `Parser` lacks `public static T Parse(string)` |
-| `SVE0007` | Primary-constructor parameter without `[EnvKey]` |
-| `SVE0008` | Carrier already declares `Load`/`TryLoad`/`SealedEnvBind` |
+| `SVE0007` | Env-managed member (parameter or partial property) without `[EnvKey]` |
+| `SVE0008` | Carrier already declares a generated member name (`Load`/`TryLoad`/`SealedEnvBind`/`ConfigurationDocumentation`/a `__` backing field) |
 | `SVE0009` | `[SealedEnv]` prefix has leading or trailing whitespace |
-| `SVE0010` | Carrier has no primary constructor |
+| `SVE0010` | Carrier has no primary constructor and no partial properties |
+| `SVE0011` | Carrier mixes primary-constructor and partial-property bindings |
+| `SVE0012` | `[EnvKey]` property is not a get-only partial property |
+| `SVE0013` | Property carrier declares its own constructor |
 | `SVE0100` | Nested / generic / ref-struct carrier (not supported yet, warning) |
 
 Blocking diagnostics suppress generation; `SVE0003` still generates
@@ -267,9 +297,8 @@ The same carrier type works unchanged against any provider — production code c
 
 ## Not yet supported
 
-- `[EnvKey]` on properties (non-primary-constructor members) — the v0.2 plan is
-  partial properties (`[EnvKey] public partial int Port { get; }`, C# 13). Today,
-  env-managed members must be primary-constructor parameters.
+- Mixing primary-constructor and partial-property bindings in one carrier
+  (`SVE0011` blocks it — pick one style per type).
 - Nested or generic carrier types (`SVE0100` warning, nothing is generated).
 
 ## Development

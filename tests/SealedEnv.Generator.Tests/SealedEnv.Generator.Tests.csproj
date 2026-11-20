@@ -8,7 +8,11 @@
   <ItemGroup>
     <PackageReference Include="coverlet.collector"/>
     <PackageReference Include="Microsoft.NET.Test.Sdk"/>
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp"/>
+    <!-- The in-memory harness PARSES the test snippets, so it needs the C# 13
+         syntax (partial properties) — a newer Roslyn than the generator's own
+         4.11 floor, which must stay put so older hosts can still load the
+         shipped generator. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" VersionOverride="4.14.0"/>
     <PackageReference Include="Verify.Xunit"/>
     <PackageReference Include="xunit"/>
     <PackageReference Include="xunit.runner.visualstudio"/>

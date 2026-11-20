@@ -42,6 +42,12 @@ internal static class SealedEnvEmitter
         builder.AppendLine($"{target.TypeDeclaration} {target.TypeName}");
         builder.AppendLine("{");
 
+        if (target.PropertyMode)
+        {
+            EmitPropertyInfrastructure(builder, target, generatorVersion);
+            builder.AppendLine();
+        }
+
         EmitLoad(builder, target, generatorVersion);
         builder.AppendLine();
         EmitTryLoad(builder, target, generatorVersion);
@@ -68,6 +74,72 @@ internal static class SealedEnvEmitter
         builder.AppendLine($"    [global::System.CodeDom.Compiler.GeneratedCodeAttribute(\"SealedEnvGenerator\", \"{generatorVersion}\")]");
         builder.AppendLine("    public const string ConfigurationDocumentation =");
         builder.AppendLine($"        \"{EscapedBody(EmitDocumentation(target).TrimEnd())}\";");
+    }
+
+    /// <summary>
+    ///     Property-mode infrastructure for the [EnvKey] partial properties: the
+    ///     private readonly backing fields, the implementing declarations (expression-
+    ///     bodied get over the field), and the constructor Load builds the carrier
+    ///     through. Readonly value-type carriers work because the fields are readonly
+    ///     and assigned from the constructor only.
+    /// </summary>
+    private static void EmitPropertyInfrastructure(StringBuilder builder, EnvTargetModel target, string generatorVersion)
+    {
+        var generatedCode = $"[global::System.CodeDom.Compiler.GeneratedCodeAttribute(\"SealedEnvGenerator\", \"{generatorVersion}\")]";
+
+        foreach (var member in target.Members)
+        {
+            builder.AppendLine($"    private readonly {member.AnnotatedTypeText} {member.VariableName};");
+        }
+
+        if (target.Members.Length > 0)
+        {
+            builder.AppendLine();
+        }
+
+        foreach (var member in target.Members)
+        {
+            builder.AppendLine($"    {generatedCode}");
+            builder.AppendLine(
+                $"    {member.AccessibilityText} partial {member.AnnotatedTypeText} {Identifier(member.ParameterName)}");
+            builder.AppendLine("    {");
+            builder.AppendLine($"        get => {member.VariableName};");
+            builder.AppendLine("    }");
+        }
+
+        if (target.Members.Length > 0)
+        {
+            builder.AppendLine();
+        }
+
+        builder.AppendLine($"    {generatedCode}");
+        builder.AppendLine(
+            $"    {target.TypeAccessibility} {target.TypeName}({ConstructorParameters(target.Members)})");
+        builder.AppendLine("    {");
+        for (var index = 0; index < target.Members.Length; index++)
+        {
+            // Assign the backing FIELD, not the property: the implementing accessor is
+            // get-only with an explicit body, and only auto-implemented properties are
+            // constructor-assignable. Positionally mangled parameters (__p0, __p1, ...)
+            // keep two members whose names differ only by case ("Port" / "port") apart.
+            builder.AppendLine($"        {target.Members[index].VariableName} = __p{index};");
+        }
+
+        builder.AppendLine("    }");
+    }
+
+    private static string ConstructorParameters(ImmutableArray<EnvMemberModel> members)
+    {
+        return string.Join(", ", members.Select((member, index) => $"{member.AnnotatedTypeText} __p{index}"));
+    }
+
+    /// <summary>
+    ///     C# keyword names (@class and friends) must be emitted escaped — the symbol
+    ///     name carries no '@'.
+    /// </summary>
+    private static string Identifier(string name)
+    {
+        return SyntaxFacts.GetKeywordKind(name) == SyntaxKind.None ? name : "@" + name;
     }
 
     public static string HintName(EnvTargetModel target)

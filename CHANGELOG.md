@@ -4,6 +4,39 @@ All notable changes to SealedEnv are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com); versions follow the
 `VersionPrefix` in `Directory.Build.props`.
 
+## 0.9.0.4 - 2026-11-20
+
+### Added
+
+- **Partial-property carriers (C# 13)**: a `[SealedEnv]` carrier may now bind
+  `[EnvKey]` get-only partial properties instead of primary-constructor
+  parameters — `[EnvKey] public partial int Port { get; }`. The generator emits
+  the implementing declarations, the private readonly backing fields and the
+  constructor `Load()`/`TryLoad()` build the carrier through. Semantics are
+  identical to the parameter mode (same key derivation, same semantics matrix,
+  same error aggregation, same provider seam, same doc export); works on
+  `sealed partial class` / `record` / (record) `struct`, including `readonly`
+  structs (readonly fields assigned from the generated constructor only).
+- New blocking diagnostics: `SVE0011` (carrier mixes parameter and property
+  bindings), `SVE0012` (`[EnvKey]` property is not a partial get-only instance
+  definition — non-partial, set/init accessor, static, indexer, `required`,
+  already implemented, accessor accessibility), `SVE0013` (property carrier
+  declares an explicit constructor — the generated one would collide, and user
+  constructions would silently see default fields).
+- `EnvKeyAttribute` now targets `AttributeTargets.Property` alongside
+  `Parameter`; an unmarked partial property on a carrier with no other binding
+  surface is reported as `SVE0007` (the precise "forgot `[EnvKey]`" message)
+  rather than the blunter `SVE0010`.
+- `SVE0008` also guards the generated `__<Property>` backing fields of
+  property-mode carriers.
+
+### Notes
+
+- The generator keeps its Microsoft.CodeAnalysis.CSharp 4.11 floor (older
+  hosts can still load it); the generator test harness parses C# 13 snippets
+  with a `VersionOverride` to 4.14. Consumer projects need C# 13 to declare
+  partial-property carriers.
+
 ## 0.9.0.3 - 2026-11-19
 
 First release: source-generated, AOT-friendly, strongly-typed environment

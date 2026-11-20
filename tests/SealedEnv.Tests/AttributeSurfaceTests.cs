@@ -95,12 +95,14 @@ public class AttributeSurfaceTests
     }
 
     [Fact]
-    public void EnvKey_targets_parameters_only()
+    public void EnvKey_targets_parameters_and_properties()
     {
         var usage = typeof(EnvKeyAttribute).GetCustomAttribute<AttributeUsageAttribute>();
 
         Assert.NotNull(usage);
-        Assert.Equal(AttributeTargets.Parameter, usage!.ValidOn);
+        // Parameters (primary-constructor bindings) and properties (partial-property
+        // bindings). Anything else is the compiler's CS0592, not the generator's job.
+        Assert.Equal(AttributeTargets.Parameter | AttributeTargets.Property, usage!.ValidOn);
         Assert.False(usage.AllowMultiple);
     }
 

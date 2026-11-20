@@ -54,8 +54,15 @@ SyntaxProvider.ForAttributeWithMetadataName("SealedEnv.SealedEnvAttribute")
 SealedEnvModel.Transform  ── per carrier ────────────────────────────────────
 │   attribute args        → Prefix, EmptyAsUnset
 │   shape checks          → SVE0005 (not sealed), SVE0100 (nested/generic/ref struct),
-│                           SVE0008 (user already declares Load/TryLoad/SealedEnvBind)
-│   per primary-ctor param:
+│                           SVE0008 (user already declares a generated member name)
+│   mode routing          → any [EnvKey] property ⇒ PROPERTY MODE:
+│                           SVE0011 (also [EnvKey] params), SVE0013 (explicit ctor),
+│                           SVE0012 (shape: partial get-only, instance, unimplemented),
+│                           SVE0008 (existing '__' + name backing field)
+│                           else ⇒ PARAMETER MODE (primary-ctor params):
+│                           no primary ctor + unmarked partial props → SVE0007 per
+│                           property, else SVE0010
+│   per member (both modes share ExtractMember):
 │     no [EnvKey]         → SVE0007 (blocking)
 │     type routing        → MemberKind (Int/Long/Double/Bool/String/NullableString/
 │                           TimeSpan/Uri/Guid/Enum/Parsable/Custom/StringArray)
@@ -77,6 +84,9 @@ RegisterSourceOutput
 ▼
 SealedEnvEmitter.Emit  ── thin code only ────────────────────────────────────
 │   partial type adds Load() / TryLoad() / private SealedEnvBind(provider, out errors)
+│   property mode additionally adds: private readonly __<Prop> fields, the
+│   implementing partial declarations (get => field), and the constructor
+│   Load builds through (position-mangled __p0/__p1 params, field assignment)
 │   per member: one SealedEnvLoader.<Kind>(...) call; all parsing/validation
 │   lives in the runtime lib so generator changes rarely move snapshots
 │   GenerateDocumentation → public const string ConfigurationDocumentation
@@ -109,27 +119,37 @@ cached.
 - `tests/SealedEnv.Tests` — every `SealedEnvLoader` helper has direct unit
   tests (malformed-value attacks included), plus the `SemanticsMatrixTests`
   (unset/empty/malformed × value-type/string/string?/required/default) and
-  generated-carrier E2E over record / record struct / primary-ctor class.
+  generated-carrier E2E over record / record struct / primary-ctor class /
+  partial-property carriers (record, class, struct, readonly record struct).
 - `tests/SealedEnv.Generator.Tests` — Verify snapshots for emitted code
   (accept a new snapshot by renaming
   `*.received.txt` → `*.verified.txt`, review it first); assertion-style
-  diagnostics tests for every SVE code; `PipelineCachingTests` for cache
+  diagnostics tests for every SVE code; `PartialPropertyTests` for the C# 13
+  binding surface; `PipelineCachingTests` for cache
   behavior (edited unrelated file → byte-identical output, all steps cached).
+
+Note for these tests: the in-memory harness parses snippets with its own
+Roslyn reference (`VersionOverride` to 4.14 in the test csproj) because partial
+properties need C# 13 syntax — the shipped generator itself keeps the 4.11
+floor so older hosts can still load it.
 
 ## Diagnostics reference
 
 | ID | Meaning | Blocks generation |
 |---|---|---|
 | SVE0001 | `[EnvKey]` on a parameter outside a primary constructor | n/a (no carrier) |
-| SVE0002 | Parameter type has no parser route | yes |
-| SVE0003 | Two parameters resolve to the same env key | no (both bind the same value) |
-| SVE0004 | `Default` does not parse as the parameter type | yes |
+| SVE0002 | Member type has no parser route | yes |
+| SVE0003 | Two members resolve to the same env key | no (both bind the same value) |
+| SVE0004 | `Default` does not parse as the member type | yes |
 | SVE0005 | Carrier is not `sealed` (record structs pass implicitly) | yes |
 | SVE0006 | `Parser` lacks `public static T Parse(string)` | yes |
-| SVE0007 | Primary-constructor parameter without `[EnvKey]` | yes |
-| SVE0008 | Carrier already declares `Load`/`TryLoad`/`SealedEnvBind` | yes |
+| SVE0007 | Env-managed member without `[EnvKey]` (unmarked ctor param, or an unmarked partial property on a carrier with no other binding surface) | yes |
+| SVE0008 | Carrier already declares a generated member name (`Load`/`TryLoad`/`SealedEnvBind`/`ConfigurationDocumentation`/a `__` + property backing field) | yes |
 | SVE0009 | `[SealedEnv]` prefix has leading or trailing whitespace | yes |
-| SVE0010 | Carrier has no primary constructor (found via the type symbol — partial placement on any part works) | yes |
+| SVE0010 | Carrier has no primary constructor and no partial properties (found via the type symbol — partial placement on any part works) | yes |
+| SVE0011 | Carrier mixes primary-constructor and partial-property bindings | yes |
+| SVE0012 | `[EnvKey]` property is not a get-only partial property (non-partial, set/init, static, indexer, required, already implemented, accessor accessibility) | yes |
+| SVE0013 | Property carrier declares an explicit constructor (the generated one would collide — and user constructions would silently skip the fields) | yes |
 | SVE0100 | Nested / generic / ref-struct carrier — not supported yet | yes (warning) |
 
 ## Releasing

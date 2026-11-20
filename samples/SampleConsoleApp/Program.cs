@@ -20,6 +20,11 @@ try
     Console.WriteLine(
         $"Loaded {nameof(SampleConfig)}: Port={config.Port}, Db=\"{config.DbConnection}\", " +
         $"Shutdown={config.ShutdownTimeout}, Hosts=[{string.Join(", ", config.Hosts)}]");
+
+    // Partial-property carrier (C# 13): defaults only, so it always loads — this
+    // exercises the property-mode emitter inside the NativeAOT publish gate.
+    var settings = SampleSettings.Load();
+    Console.WriteLine($"Loaded {nameof(SampleSettings)}: Retries={settings.Retries}, Host=\"{settings.Host}\"");
     return 0;
 }
 catch (SealedEnvException exception)
@@ -35,3 +40,11 @@ internal sealed partial record SampleConfig(
     [EnvKey(Required = true)] string DbConnection,
     [EnvKey(Default = "00:00:30")] TimeSpan ShutdownTimeout,
     [EnvKey] string[] Hosts);
+
+[SealedEnv(Prefix = "SAMPLE_")]
+internal sealed partial class SampleSettings
+{
+    [EnvKey(Default = "3")] public partial int Retries { get; }
+
+    [EnvKey(Default = "localhost")] public partial string Host { get; }
+}

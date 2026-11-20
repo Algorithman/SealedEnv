@@ -58,7 +58,7 @@ internal static class SveDiagnostics
 
     public static readonly DiagnosticDescriptor MemberNameConflict = new DiagnosticDescriptor("SVE0008",
         "Member name conflicts with a generated member",
-        "Type '{0}' already declares '{1}'; SealedEnv generates Load, TryLoad and SealedEnvBind members and cannot add a duplicate member with that name", Category,
+        "Type '{0}' already declares '{1}'; SealedEnv cannot add a generated member with that name (Load, TryLoad, SealedEnvBind — and, for partial-property carriers, the '__' + property backing fields)", Category,
         DiagnosticSeverity.Error, true);
 
     public static readonly DiagnosticDescriptor WhitespacePrefix = new DiagnosticDescriptor("SVE0009",
@@ -71,7 +71,25 @@ internal static class SveDiagnostics
         "Carrier has no primary constructor",
         "Type '{0}' is a [SealedEnv] carrier but has no primary constructor; there are no parameters to bind environment variables to", Category,
         DiagnosticSeverity.Error, true,
-        "Give the carrier a primary constructor whose parameters carry [EnvKey], e.g. sealed partial record AppConfig([EnvKey] int Port). For partial declarations the primary constructor may live on any part — [SealedEnv] finds it through the type symbol.");
+        "Give the carrier a primary constructor whose parameters carry [EnvKey], e.g. sealed partial record AppConfig([EnvKey] int Port), or bind via C# 13 partial properties instead ([EnvKey] public partial int Port { get; }). For partial declarations the primary constructor may live on any part — [SealedEnv] finds it through the type symbol.");
+
+    public static readonly DiagnosticDescriptor MixedBindingStyles = new DiagnosticDescriptor("SVE0011",
+        "Carrier mixes primary-constructor and partial-property bindings",
+        "Type '{0}' has [EnvKey] on both primary-constructor parameters and properties; a carrier binds either parameters or partial properties, not both", Category,
+        DiagnosticSeverity.Error, true,
+        "Move every binding to one style: mark all [EnvKey] members as primary-constructor parameters, or declare them all as get-only partial properties ([EnvKey] public partial int Port { get; }).");
+
+    public static readonly DiagnosticDescriptor UnsupportedPropertyShape = new DiagnosticDescriptor("SVE0012",
+        "[EnvKey] property is not a get-only partial property",
+        "[EnvKey] property '{0}' on type '{1}' is not a supported partial-property binding: {2}; declare it as 'public partial T {0} {{ get; }}' and let SealedEnv supply the implementation", Category,
+        DiagnosticSeverity.Error, true,
+        "Supported shape: a partial definition with exactly a get accessor, no set/init accessor, no static or required modifier, no accessor accessibility, and no implementation on another partial part (the compiler itself rejects defining declarations with accessor bodies).");
+
+    public static readonly DiagnosticDescriptor ConstructorConflict = new DiagnosticDescriptor("SVE0013",
+        "Property carrier declares its own constructor",
+        "Type '{0}' binds via partial properties, so SealedEnv supplies the constructor that Load uses; an explicit constructor would leave the generated fields unbound", Category,
+        DiagnosticSeverity.Error, true,
+        "Remove the constructor (and any primary constructor parameters) and construct the carrier via Load()/TryLoad() only.");
 
     public static readonly DiagnosticDescriptor UnsupportedCarrierShape = new DiagnosticDescriptor("SVE0100", "Carrier shape not yet supported",
         "{0} — no Load/TryLoad members are generated for this type", Category, DiagnosticSeverity.Warning, true,
@@ -90,6 +108,9 @@ internal static class SveDiagnostics
             [MemberNameConflict.Id] = MemberNameConflict,
             [WhitespacePrefix.Id] = WhitespacePrefix,
             [NoPrimaryConstructor.Id] = NoPrimaryConstructor,
+            [MixedBindingStyles.Id] = MixedBindingStyles,
+            [UnsupportedPropertyShape.Id] = UnsupportedPropertyShape,
+            [ConstructorConflict.Id] = ConstructorConflict,
             [UnsupportedCarrierShape.Id] = UnsupportedCarrierShape,
         }.ToImmutableDictionary();
 
@@ -98,7 +119,7 @@ internal static class SveDiagnostics
     ///     (no half-working Load()). SVE0003 duplicates still generate: behavior stays
     ///     deterministic and the diagnostic explains it.
     /// </summary>
-    public static readonly string[] BlockingIds = ["SVE0002", "SVE0004", "SVE0006", "SVE0007", "SVE0008", "SVE0009", "SVE0010",];
+    public static readonly string[] BlockingIds = ["SVE0002", "SVE0004", "SVE0006", "SVE0007", "SVE0008", "SVE0009", "SVE0010", "SVE0011", "SVE0012", "SVE0013",];
 }
 
 /// <summary>

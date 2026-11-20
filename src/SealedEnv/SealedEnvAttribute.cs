@@ -14,7 +14,9 @@ namespace SealedEnv;
 /// <summary>
 ///     Marks a record/class/struct as an environment-variable configuration type.
 ///     The source generator emits <c>Load()</c>/<c>TryLoad()</c> members that read
-///     every primary-constructor parameter decorated with <see cref="EnvKeyAttribute" />.
+///     every member decorated with <see cref="EnvKeyAttribute" /> — either all
+///     primary-constructor parameters, or all partial properties; a carrier mixes
+///     neither.
 /// </summary>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct)]
 public sealed class SealedEnvAttribute : Attribute

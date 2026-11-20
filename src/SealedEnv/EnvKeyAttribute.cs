@@ -12,11 +12,17 @@
 namespace SealedEnv;
 
 /// <summary>
-///     Declares a primary-constructor parameter as an environment-variable binding.
-///     Without an explicit key the env var name is derived from the parameter name
-///     (<c>DbConnection</c> → <c>DBCONNECTION</c>).
+///     Declares a primary-constructor parameter or a partial property as an
+///     environment-variable binding. Without an explicit key the env var name is
+///     derived from the member name (<c>DbConnection</c> → <c>DBCONNECTION</c>).
 /// </summary>
-[AttributeUsage(AttributeTargets.Parameter)]
+/// <remarks>
+///     On a property the member must be a <c>partial</c> get-only property whose
+///     implementation the generator supplies
+///     (<c>[EnvKey] public partial int Port { get; }</c>, C# 13). A carrier binds
+///     either primary-constructor parameters or partial properties — never both.
+/// </remarks>
+[AttributeUsage(AttributeTargets.Parameter | AttributeTargets.Property)]
 public sealed class EnvKeyAttribute : Attribute
 {
     public EnvKeyAttribute()
